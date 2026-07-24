@@ -1,0 +1,45 @@
+# Unreal Engine generated folders
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+Script/
+Platforms/*/Build/
+Platforms/*/Binaries/
+
+# Visual Studio / Rider / VS Code project files (regenerated from .uproject)
+.vs/
+.vscode/
+.idea/
+*.VC.db
+*.VC.opendb
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.xcodeproj
+*.xcworkspace
+.DS_Store
+
+# Compiled binaries
+*.dll
+*.exe
+*.pdb
+*.obj
+*.lib
+*.a
+*.so
+*.dylib
+
+# Crash/log artifacts
+*.log
+*.dmp
+
+# Packaged / cooked output
+/Packaged/
+/Cooked/
+/Dist/
+
+# Local-only config that should not be shared
+Config/*Local*.ini
