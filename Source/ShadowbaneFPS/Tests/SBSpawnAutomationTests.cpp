@@ -15,17 +15,18 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FSBSpawn_AvailabilityMatrixTest::RunTest(const FString& Parameters)
 {
 	// Pure availability matrix — no world required.
-	ASBSpawnPoint* AtkStaging = NewObject<ASBSpawnPoint>();
+	UObject* Outer = GetTransientPackage();
+	ASBSpawnPoint* AtkStaging = NewObject<ASBSpawnPoint>(Outer, NAME_None, RF_Transient);
 	AtkStaging->Team = ESBTeam::Attackers;
 	AtkStaging->MinStage = ESBConquestStage::OuterSiege;
 	AtkStaging->MaxStage = ESBConquestStage::OuterSiege;
 
-	ASBSpawnPoint* AtkForward = NewObject<ASBSpawnPoint>();
+	ASBSpawnPoint* AtkForward = NewObject<ASBSpawnPoint>(Outer, NAME_None, RF_Transient);
 	AtkForward->Team = ESBTeam::Attackers;
 	AtkForward->MinStage = ESBConquestStage::Courtyard;
 	AtkForward->MaxStage = ESBConquestStage::InnerKeep;
 
-	ASBSpawnPoint* DefKeep = NewObject<ASBSpawnPoint>();
+	ASBSpawnPoint* DefKeep = NewObject<ASBSpawnPoint>(Outer, NAME_None, RF_Transient);
 	DefKeep->Team = ESBTeam::Defenders;
 	DefKeep->MinStage = ESBConquestStage::InnerKeep;
 	DefKeep->MaxStage = ESBConquestStage::InnerKeep;

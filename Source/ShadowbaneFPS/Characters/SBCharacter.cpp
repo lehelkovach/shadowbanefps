@@ -2,6 +2,7 @@
 
 #include "SBCharacter.h"
 #include "SBCharacterArchetype.h"
+#include "Art/SBPlaceholderArt.h"
 #include "Core/SBPlayerState.h"
 #include "Core/SBSiegeGameMode.h"
 #include "Core/SBTypes.h"
@@ -55,17 +56,29 @@ ASBCharacter::ASBCharacter()
 	BodyMesh->SetRelativeLocation(FVector(0.f, 0.f, -20.f));
 	BodyMesh->SetRelativeScale3D(FVector(0.7f, 0.7f, 1.6f));
 
+	RuneDisc = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RuneDisc"));
+	RuneDisc->SetupAttachment(RootComponent);
+	RuneDisc->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	RuneDisc->SetRelativeLocation(FVector(0.f, 0.f, 130.f));
+	RuneDisc->SetRelativeScale3D(FVector(0.55f, 0.55f, 0.08f));
+
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeMesh(TEXT("/Engine/BasicShapes/Cube.Cube"));
 	if (CubeMesh.Succeeded())
 	{
 		BodyMesh->SetStaticMesh(CubeMesh.Object);
+	}
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMesh(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+	if (CylinderMesh.Succeeded())
+	{
+		RuneDisc->SetStaticMesh(CylinderMesh.Object);
 	}
 }
 
 void ASBCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	UpdateTeamBodyColor();
+	UpdatePlaceholderVisuals();
 }
 
 void ASBCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -117,7 +130,7 @@ void ASBCharacter::ApplyArchetype(USBCharacterArchetype* InArchetype)
 	UE_LOG(LogShadowbane, Verbose, TEXT("Applied archetype %s hp=%.0f speed=%.0f dmg=%.0f siege=%.0f"),
 		*InArchetype->ArchetypeId.ToString(), MaxHealth, InArchetype->MoveSpeed, AttackDamage, StructureDamage);
 
-	UpdateTeamBodyColor();
+	UpdatePlaceholderVisuals();
 }
 
 void ASBCharacter::Tick(float DeltaSeconds)
@@ -127,6 +140,12 @@ void ASBCharacter::Tick(float DeltaSeconds)
 	if (HasAuthority())
 	{
 		PerformSupportTick(DeltaSeconds);
+	}
+
+	if (RuneDisc)
+	{
+		const float Pulse = 0.55f + 0.05f * FMath::Sin(GetWorld()->GetTimeSeconds() * 3.f);
+		RuneDisc->SetRelativeScale3D(FVector(Pulse, Pulse, 0.08f));
 	}
 }
 
@@ -354,28 +373,17 @@ void ASBCharacter::OnRep_Health()
 	// Hook for damage feedback / HUD pulse.
 }
 
-void ASBCharacter::UpdateTeamBodyColor()
+void ASBCharacter::OnRep_Archetype()
 {
-	if (!BodyMesh)
-	{
-		return;
-	}
+	UpdatePlaceholderVisuals();
+}
 
-	FLinearColor Color = FLinearColor(0.7f, 0.7f, 0.7f);
-	if (const ASBPlayerState* PS = GetPlayerState<ASBPlayerState>())
-	{
-		if (PS->GetTeam() == ESBTeam::Attackers)
-		{
-			Color = FLinearColor(0.85f, 0.25f, 0.15f);
-		}
-		else if (PS->GetTeam() == ESBTeam::Defenders)
-		{
-			Color = FLinearColor(0.2f, 0.4f, 0.9f);
-		}
-	}
+void ASBCharacter::UpdatePlaceholderVisuals()
+{
+	const ASBPlayerState* PS = GetPlayerState<ASBPlayerState>();
+	const FLinearColor BodyColor = USBPlaceholderArt::TeamColor(PS ? PS->GetTeam() : ESBTeam::Unassigned);
+	USBPlaceholderArt::ApplySolidColor(BodyMesh, BodyColor);
 
-	// Placeholder until a team-colored MID is authored in Content/.
-	BodyMesh->SetCustomPrimitiveDataFloat(0, Color.R);
-	BodyMesh->SetCustomPrimitiveDataFloat(1, Color.G);
-	BodyMesh->SetCustomPrimitiveDataFloat(2, Color.B);
+	const FSBPlaceholderIcon Icon = USBPlaceholderArt::MakeIcon(Archetype);
+	USBPlaceholderArt::ApplySolidColor(RuneDisc, Icon.Tint);
 }

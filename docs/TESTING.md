@@ -39,6 +39,7 @@ Tests live under `Source/ShadowbaneFPS/Tests/` and are registered under the
 | `ShadowbaneFPS.Roster.RoleCoverage` | Healer / siege / detection / control present |
 | `ShadowbaneFPS.Spawn.AvailabilityMatrix` | Staged spawn availability by team/stage |
 | `ShadowbaneFPS.Telemetry.SessionLifecycle` | Telemetry session start/events/end |
+| `ShadowbaneFPS.Art.PlaceholderIcons` | Dummy icon codes / team color sanity |
 
 ### Run from the Editor
 1. Build `ShadowbaneFPSEditor`

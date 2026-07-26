@@ -5,6 +5,8 @@
 #include "Siege/SBDestructibleStructure.h"
 #include "Siege/SBCapturePoint.h"
 #include "Siege/SBConquestObjective.h"
+#include "Art/SBWorldMarker.h"
+#include "Art/SBPlaceholderArt.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "UObject/ConstructorHelpers.h"
@@ -52,9 +54,7 @@ UStaticMeshComponent* ASBBrokenCitadelBuilder::AddBox(const FVector& Location, c
 	Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 	Mesh->SetCollisionProfileName(TEXT("BlockAll"));
 	Mesh->RegisterComponent();
-	Mesh->SetCustomPrimitiveDataFloat(0, Color.R);
-	Mesh->SetCustomPrimitiveDataFloat(1, Color.G);
-	Mesh->SetCustomPrimitiveDataFloat(2, Color.B);
+	USBPlaceholderArt::ApplySolidColor(Mesh, Color);
 	return Mesh;
 }
 
@@ -104,6 +104,25 @@ void ASBBrokenCitadelBuilder::BuildVisualGeometry()
 
 	// South service tunnel mouth
 	AddBox(FVector(-1200.f, -1400.f, 80.f), FVector(8.f, 2.5f, 1.6f), FLinearColor(0.18f, 0.16f, 0.14f), "ServiceTunnel");
+
+	// Local (non-replicated) dummy world markers — readable icons/runes without Content assets.
+	auto SpawnLocalMarker = [this](const FVector& Loc, const TCHAR* Label, const FLinearColor& Color, float Scale)
+	{
+		FActorSpawnParameters Params;
+		Params.Owner = this;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		if (ASBWorldMarker* Marker = GetWorld()->SpawnActor<ASBWorldMarker>(Loc, FRotator::ZeroRotator, Params))
+		{
+			Marker->SetReplicates(false);
+			Marker->Configure(Label, Color, Scale);
+		}
+	};
+
+	SpawnLocalMarker(FVector(-1000.f, 0.f, 420.f), TEXT("MAIN GATE"), FLinearColor(0.75f, 0.45f, 0.2f), 1.2f);
+	SpawnLocalMarker(FVector(-2200.f, 1400.f, 160.f), TEXT("NORTH WALL"), FLinearColor(0.55f, 0.7f, 1.f), 1.f);
+	SpawnLocalMarker(FVector(-2200.f, -1400.f, 160.f), TEXT("SERVICE"), FLinearColor(0.7f, 0.5f, 0.9f), 1.f);
+	SpawnLocalMarker(FVector(0.f, 0.f, 180.f), TEXT("COURTYARD"), FLinearColor(0.95f, 0.8f, 0.25f), 1.4f);
+	SpawnLocalMarker(FVector(2400.f, 0.f, 200.f), TEXT("KEEP RUNE"), FLinearColor(0.3f, 0.95f, 0.55f), 1.6f);
 }
 
 void ASBBrokenCitadelBuilder::SpawnSpawnPoint(const FVector& Location, float Yaw, ESBTeam Team, ESBConquestStage MinStage, ESBConquestStage MaxStage, bool bSiege, const FName& Name)

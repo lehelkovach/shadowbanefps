@@ -5,6 +5,7 @@
 #include "Core/SBLog.h"
 #include "Core/SBSiegeGameMode.h"
 #include "Core/SBMatchTelemetry.h"
+#include "Art/SBPlaceholderArt.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "UObject/ConstructorHelpers.h"
@@ -123,6 +124,8 @@ void ASBDestructibleStructure::ApplyVisualState()
 	{
 		return;
 	}
+
+	USBPlaceholderArt::ApplySolidColor(Mesh, USBPlaceholderArt::StructureColor(State));
 
 	switch (State)
 	{

@@ -6,7 +6,7 @@
 #include "GameFramework/HUD.h"
 #include "SBSiegeHUD.generated.h"
 
-/** Debug / pilot HUD: timer, phase, conquest, health, roster while dead (§11). */
+/** Pilot HUD with dummy icon chips / rune glyphs (§11). */
 UCLASS()
 class SHADOWBANEFPS_API ASBSiegeHUD : public AHUD
 {
@@ -17,4 +17,7 @@ public:
 
 private:
 	void DrawLine(float& Y, const FString& Text, const FLinearColor& Color = FLinearColor::White);
+	void DrawHealthBar(float X, float Y, float W, float H, float Pct);
+	void DrawRosterChips(float& Y);
+	void DrawAbilityRunes();
 };

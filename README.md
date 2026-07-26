@@ -15,6 +15,8 @@ game — and leaves progression, economy, and persistence out of scope.
   dedicated-server plan.
 - **[Testing & logging](docs/TESTING.md)** — automation tests, log categories,
   telemetry CSV, headless run script.
+- **[Placeholder art](docs/PLACEHOLDER_ART.md)** — dummy icons/runes/colors now;
+  real-art swap list later.
 
 ## Status
 Playable greybox pilot in progress. Engine target **UE 5.5** (`ShadowbaneFPS.uproject`).

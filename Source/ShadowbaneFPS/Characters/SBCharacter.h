@@ -52,13 +52,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
 	TObjectPtr<UStaticMeshComponent> BodyMesh;
 
+	/** Floating dummy "rune" disc — role-colored placeholder VFX. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh")
+	TObjectPtr<UStaticMeshComponent> RuneDisc;
+
 	UPROPERTY(ReplicatedUsing = OnRep_Health, BlueprintReadOnly, Category = "Stats")
 	float Health = 100.f;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Stats")
 	float MaxHealth = 100.f;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Stats")
+	UPROPERTY(ReplicatedUsing = OnRep_Archetype, BlueprintReadOnly, Category = "Stats")
 	TObjectPtr<USBCharacterArchetype> Archetype = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
@@ -99,5 +103,8 @@ protected:
 	UFUNCTION()
 	void OnRep_Health();
 
-	void UpdateTeamBodyColor();
+	UFUNCTION()
+	void OnRep_Archetype();
+
+	void UpdatePlaceholderVisuals();
 };

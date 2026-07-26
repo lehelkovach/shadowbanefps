@@ -6,6 +6,7 @@
 #include "Core/SBPlayerController.h"
 #include "Characters/SBCharacter.h"
 #include "Characters/SBCharacterArchetype.h"
+#include "Art/SBPlaceholderArt.h"
 #include "Engine/Canvas.h"
 #include "Engine/Engine.h"
 #include "CanvasItem.h"
@@ -33,15 +34,17 @@ void ASBSiegeHUD::DrawHUD()
 		const int32 Minutes = Remaining / 60;
 		const int32 Seconds = Remaining % 60;
 
-		DrawLine(Y, FString::Printf(TEXT("TIME %02d:%02d  |  Phase: %s  |  Stage: %s"),
+		DrawLine(Y, FString::Printf(TEXT("TIME %02d:%02d  |  %s  |  %s"),
 			Minutes,
 			Seconds,
 			*UEnum::GetDisplayValueAsText(GS->GetPhase()).ToString(),
 			*UEnum::GetDisplayValueAsText(GS->GetConquestStage()).ToString()));
 
-		DrawLine(Y, FString::Printf(TEXT("Final Objective: %d%%"),
-			FMath::RoundToInt(GS->GetFinalObjectiveProgress() * 100.f)),
-			FLinearColor(1.f, 0.85f, 0.3f));
+		const float ObjPct = GS->GetFinalObjectiveProgress();
+		DrawLine(Y, FString::Printf(TEXT("Final Objective: %d%%"), FMath::RoundToInt(ObjPct * 100.f)),
+			USBPlaceholderArt::ObjectiveColor(ObjPct));
+		DrawHealthBar(24.f, Y, 280.f, 10.f, ObjPct);
+		Y += 18.f;
 
 		if (GS->GetResult() != ESBMatchResult::Undecided)
 		{
@@ -53,52 +56,42 @@ void ASBSiegeHUD::DrawHUD()
 
 	if (PS)
 	{
+		const FLinearColor TeamTint = USBPlaceholderArt::TeamColor(PS->GetTeam());
 		DrawLine(Y, FString::Printf(TEXT("Team: %s"),
 			*UEnum::GetDisplayValueAsText(PS->GetTeam()).ToString()),
-			PS->GetTeam() == ESBTeam::Attackers
-				? FLinearColor(1.f, 0.4f, 0.3f)
-				: FLinearColor(0.4f, 0.6f, 1.f));
+			TeamTint);
 
 		if (const USBCharacterArchetype* Arch = PS->GetSelectedArchetype())
 		{
-			DrawLine(Y, FString::Printf(TEXT("Character: %s"), *Arch->DisplayName.ToString()));
+			const FSBPlaceholderIcon Icon = USBPlaceholderArt::MakeIcon(Arch);
+			USBPlaceholderArt::DrawIconChip(Canvas, 24.f, Y, 28.f, Icon, true);
+			DrawLine(Y, FString::Printf(TEXT("     %s  [%s]"),
+				*Arch->DisplayName.ToString(),
+				*Icon.Code),
+				Icon.Tint);
 		}
 	}
 
 	if (Character)
 	{
+		const float Pct = Character->GetMaxHealth() > 0.f ? Character->GetHealth() / Character->GetMaxHealth() : 0.f;
 		DrawLine(Y, FString::Printf(TEXT("HP: %.0f / %.0f"), Character->GetHealth(), Character->GetMaxHealth()),
 			FLinearColor(0.4f, 1.f, 0.4f));
+		DrawHealthBar(24.f, Y, 220.f, 12.f, Pct);
+		Y += 20.f;
 	}
 	else if (PC)
 	{
-		DrawLine(Y, FString::Printf(TEXT("DEAD  |  Respawn in %.1fs  |  Press R when ready"),
+		DrawLine(Y, FString::Printf(TEXT("DEAD  |  Respawn in %.1fs  |  Press R"),
 			PC->GetRespawnTimeRemaining()),
 			FLinearColor(1.f, 0.5f, 0.5f));
-		DrawLine(Y, TEXT("Keys 1-0 = switch pre-built character (while dead)"), FLinearColor(0.8f, 0.8f, 0.8f));
-
-		if (GS)
-		{
-			const TArray<TObjectPtr<USBCharacterArchetype>>& Roster = GS->GetLocalRoster();
-			for (int32 i = 0; i < Roster.Num() && i < 10; ++i)
-			{
-				const USBCharacterArchetype* Arch = Roster[i].Get();
-				if (!Arch)
-				{
-					continue;
-				}
-				const bool bSelected = PS && PS->GetSelectedArchetypeId() == Arch->ArchetypeId;
-				DrawLine(Y,
-					FString::Printf(TEXT("%d: %s%s"),
-						(i + 1) % 10,
-						*Arch->DisplayName.ToString(),
-						bSelected ? TEXT("  <selected>") : TEXT("")),
-					bSelected ? FLinearColor::Yellow : FLinearColor(0.75f, 0.75f, 0.75f));
-			}
-		}
+		DrawLine(Y, TEXT("1-0 switch pre-built character"), FLinearColor(0.8f, 0.8f, 0.8f));
+		DrawRosterChips(Y);
 	}
 
-	DrawLine(Y, TEXT("LMB Fire  |  F Ping  |  E Interact  |  WASD Move  |  Space Jump"),
+	DrawAbilityRunes();
+
+	DrawLine(Y, TEXT("LMB Fire  |  F Ping  |  E Interact  |  WASD Move"),
 		FLinearColor(0.55f, 0.55f, 0.55f));
 }
 
@@ -115,4 +108,97 @@ void ASBSiegeHUD::DrawLine(float& Y, const FString& Text, const FLinearColor& Co
 	Item.Scale = FVector2D(Scale, Scale);
 	Canvas->DrawItem(Item);
 	Y += 18.f * FMath::Max(1.f, Scale);
+}
+
+void ASBSiegeHUD::DrawHealthBar(float X, float Y, float W, float H, float Pct)
+{
+	const float Clamped = FMath::Clamp(Pct, 0.f, 1.f);
+	FCanvasTileItem Back(FVector2D(X, Y), FVector2D(W, H), FLinearColor(0.1f, 0.1f, 0.1f, 0.8f));
+	Canvas->DrawItem(Back);
+	FCanvasTileItem Fill(FVector2D(X, Y), FVector2D(W * Clamped, H), FLinearColor(0.25f, 0.85f, 0.35f, 0.95f));
+	Canvas->DrawItem(Fill);
+}
+
+void ASBSiegeHUD::DrawRosterChips(float& Y)
+{
+	const ASBSiegeGameState* GS = GetWorld() ? GetWorld()->GetGameState<ASBSiegeGameState>() : nullptr;
+	const ASBPlayerState* PS = GetOwningPlayerController()
+		? GetOwningPlayerController()->GetPlayerState<ASBPlayerState>()
+		: nullptr;
+	if (!GS || !Canvas)
+	{
+		return;
+	}
+
+	const TArray<TObjectPtr<USBCharacterArchetype>>& Roster = GS->GetLocalRoster();
+	const float Chip = 36.f;
+	const float Gap = 8.f;
+	float X = 24.f;
+
+	for (int32 i = 0; i < Roster.Num() && i < 10; ++i)
+	{
+		const USBCharacterArchetype* Arch = Roster[i].Get();
+		if (!Arch)
+		{
+			continue;
+		}
+
+		const FSBPlaceholderIcon Icon = USBPlaceholderArt::MakeIcon(Arch);
+		const bool bSelected = PS && PS->GetSelectedArchetypeId() == Arch->ArchetypeId;
+		USBPlaceholderArt::DrawIconChip(Canvas, X, Y, Chip, Icon, bSelected);
+
+		// Hotkey under chip
+		FCanvasTextItem Key(
+			FVector2D(X + 12.f, Y + Chip + 2.f),
+			FText::FromString(FString::Printf(TEXT("%d"), (i + 1) % 10)),
+			GEngine->GetSmallFont(),
+			bSelected ? FLinearColor::Yellow : FLinearColor(0.75f, 0.75f, 0.75f));
+		Canvas->DrawItem(Key);
+
+		X += Chip + Gap;
+	}
+
+	Y += Chip + 22.f;
+}
+
+void ASBSiegeHUD::DrawAbilityRunes()
+{
+	if (!Canvas)
+	{
+		return;
+	}
+
+	// Dummy ability rune bar — stands in for real spell icons until art lands.
+	const ASBPlayerState* PS = GetOwningPlayerController()
+		? GetOwningPlayerController()->GetPlayerState<ASBPlayerState>()
+		: nullptr;
+	const USBCharacterArchetype* Arch = PS ? PS->GetSelectedArchetype() : nullptr;
+	const FSBPlaceholderIcon Icon = USBPlaceholderArt::MakeIcon(Arch);
+
+	const float Size = 42.f;
+	const float Gap = 10.f;
+	const float TotalW = Size * 4.f + Gap * 3.f;
+	float X = (Canvas->ClipX - TotalW) * 0.5f;
+	const float Y = Canvas->ClipY - Size - 28.f;
+
+	const TCHAR* Glyphs[4] = { TEXT("I"), TEXT("II"), TEXT("III"), TEXT("R") };
+	const FLinearColor Colors[4] = {
+		Icon.Tint,
+		Icon.Tint * FLinearColor(0.85f, 0.85f, 1.f),
+		Icon.Tint * FLinearColor(1.f, 0.85f, 0.7f),
+		FLinearColor(0.7f, 0.7f, 0.75f)
+	};
+
+	for (int32 i = 0; i < 4; ++i)
+	{
+		USBPlaceholderArt::DrawRuneGlyph(Canvas, X, Y, Size, Colors[i], Glyphs[i]);
+		X += Size + Gap;
+	}
+
+	FCanvasTextItem Hint(
+		FVector2D((Canvas->ClipX - 220.f) * 0.5f, Y + Size + 4.f),
+		FText::FromString(TEXT("placeholder ability runes")),
+		GEngine->GetSmallFont(),
+		FLinearColor(0.6f, 0.6f, 0.6f));
+	Canvas->DrawItem(Hint);
 }
