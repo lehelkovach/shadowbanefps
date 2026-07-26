@@ -10,16 +10,9 @@
 class USBCharacterArchetype;
 
 /**
- * Per-player match state: team assignment and the currently selected pre-built
- * character. See design doc §3 (selection) and §9 (post-death switching).
- *
- * HIDDEN COMPOSITION NOTE (design doc §4):
- * The selected archetype is authoritative on the server. It must only be
- * disclosed to teammates and to enemies who have *observed* the player. The raw
- * identity should NOT be blanket-replicated to opponents. See SBSiegeGameMode /
- * the intel system for how disclosure is gated per-connection. The property here
- * is replicated for owner + teammates; enemy-facing knowledge is delivered
- * separately as short-lived "observed" intel markers.
+ * Per-player match state. Selected character is replicated by ArchetypeId so
+ * clients can resolve against the shared roster without needing cooked assets.
+ * Full enemy roster disclosure is still a separate intel concern (§4).
  */
 UCLASS()
 class SHADOWBANEFPS_API ASBPlayerState : public APlayerState
@@ -34,30 +27,38 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	ESBTeam GetTeam() const { return Team; }
 
-	/** Server-only. Assigns the player's side. */
 	void SetTeam(ESBTeam NewTeam);
 
 	UFUNCTION(BlueprintCallable, Category = "Siege")
-	USBCharacterArchetype* GetSelectedArchetype() const { return SelectedArchetype; }
+	USBCharacterArchetype* GetSelectedArchetype() const;
 
-	/** Server-only. Sets the pre-built character this player is (re)deploying as. */
+	UFUNCTION(BlueprintCallable, Category = "Siege")
+	FName GetSelectedArchetypeId() const { return SelectedArchetypeId; }
+
 	void SetSelectedArchetype(USBCharacterArchetype* NewArchetype);
 
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	bool IsAlive() const { return bAlive; }
 
-	void SetAlive(bool bNewAlive) { bAlive = bNewAlive; }
+	void SetAlive(bool bNewAlive);
 
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_Team, BlueprintReadOnly, Category = "Siege")
 	ESBTeam Team = ESBTeam::Unassigned;
 
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
-	TObjectPtr<USBCharacterArchetype> SelectedArchetype = nullptr;
+	UPROPERTY(ReplicatedUsing = OnRep_ArchetypeId, BlueprintReadOnly, Category = "Siege")
+	FName SelectedArchetypeId = NAME_None;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
 	bool bAlive = false;
 
+	/** Resolved locally from SelectedArchetypeId; not replicated. */
+	UPROPERTY(Transient)
+	mutable TObjectPtr<USBCharacterArchetype> CachedArchetype = nullptr;
+
 	UFUNCTION()
 	void OnRep_Team();
+
+	UFUNCTION()
+	void OnRep_ArchetypeId();
 };

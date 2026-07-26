@@ -10,21 +10,23 @@ game — and leaves progression, economy, and persistence out of scope.
 
 ## Docs
 - **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0).
-- **[Setup & operations](docs/SETUP.md)** — hardware, Epic/UE account, building on
-  Windows, and running the dedicated server on an OCI VM.
+- **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
+  Windows build, **friend Local Cursor Agent onboarding** (§5), and OCI
+  dedicated-server plan.
 
 ## Status
-Early scaffold. Engine target **UE 5.5** (`ShadowbaneFPS.uproject`).
+Playable greybox pilot in progress. Engine target **UE 5.5** (`ShadowbaneFPS.uproject`).
 
-Implemented (C++ framework, server-authoritative):
-- Match flow, 20-min clock, phase pacing, conquest stages, overtime, victory
-  (`SBSiegeGameMode` / `SBSiegeGameState`).
-- Teams, selected pre-built character, respawn + post-death switching
-  (`SBPlayerState`, `SBCharacterArchetype`).
-- Siege actors: destructible structures, courtyard capture point, inner-keep
-  final objective.
+Implemented (C++ / server-authoritative):
+- Match flow, 20-min clock, phases, conquest stages, overtime, victory
+- Shared character pawn with hitscan combat, heal/repair ticks, team colors
+- 10 curated Shadowbane-flavored pre-built archetypes (runtime roster)
+- Staged spawn points + post-death character switch (keys `1-0`, `R` respawn)
+- Runtime **Broken Citadel** greybox (no `.umap` required yet)
+- Destructible gate/breach, courtyard capture, final keep objective
+- Debug HUD (timer, phase, stage, HP, roster)
 
-See [`docs/SETUP.md`](docs/SETUP.md) for what's next and how to build/run.
+See [`docs/SETUP.md`](docs/SETUP.md) to build/run on a Windows GPU machine.
 
 ## Project layout
 ```

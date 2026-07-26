@@ -289,10 +289,23 @@ Paste something like this into **Cursor Desktop → Agent** on their rig:
 - [ ] Repo cloned on friend's PC; Cursor Desktop opens the project folder.
 - [ ] UE 5.5 + VS2022 installed; Agent (or human) generated project files.
 - [ ] `ShadowbaneFPSEditor` Win64 Development **builds successfully**.
-- [ ] Editor launches. Missing-map warnings for `BrokenCitadel` are expected
-      until we add the greybox — not a blocker for compiling the framework.
-- [ ] They can run `-game` standalone and (optionally) a local listen+client join.
+- [ ] Editor launches on `/Engine/Maps/Entry` — the GameMode auto-spawns the
+      **Broken Citadel greybox** (no custom `.umap` required).
+- [ ] PIE / `-game`: you spawn as attacker or defender, see the debug HUD, can
+      shoot, damage the gate, capture the courtyard, and switch characters after death.
 - [ ] Any compile errors they hit are pasted back so Cloud Agent can patch them.
+
+### 5.8 In-game controls (current greybox)
+| Input | Action |
+| --- | --- |
+| WASD | Move |
+| Mouse | Look |
+| Space | Jump |
+| LMB | Fire (hitscan; damages players + structures) |
+| F | Ping (debug marker) |
+| E | Interact (reserved) |
+| 1–0 | Select pre-built character (while dead) |
+| R | Request respawn |
 
 ---
 

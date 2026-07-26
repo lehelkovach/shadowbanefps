@@ -1,11 +1,23 @@
 // Copyright shadowbanefps.
 
 #include "SBSiegeGameState.h"
+#include "Characters/SBCharacterArchetype.h"
+#include "Characters/SBPilotRoster.h"
 #include "Net/UnrealNetwork.h"
 
 ASBSiegeGameState::ASBSiegeGameState()
 {
 	SetNetUpdateFrequency(10.0f);
+}
+
+void ASBSiegeGameState::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (LocalRoster.Num() == 0)
+	{
+		USBPilotRoster::BuildDefaultRoster(this, LocalRoster);
+	}
 }
 
 void ASBSiegeGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -21,10 +33,25 @@ void ASBSiegeGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 
 float ASBSiegeGameState::GetRemainingRegulationSeconds() const
 {
-	// GetServerWorldTimeSeconds() is synchronized on clients, so this reads the
-	// same countdown everywhere without per-tick replication of the clock.
 	const double Now = GetServerWorldTimeSeconds();
 	return FMath::Max(0.f, static_cast<float>(RegulationDeadlineServerTime - Now));
+}
+
+USBCharacterArchetype* ASBSiegeGameState::FindArchetypeById(FName ArchetypeId) const
+{
+	if (ArchetypeId.IsNone())
+	{
+		return nullptr;
+	}
+
+	for (USBCharacterArchetype* Arch : LocalRoster)
+	{
+		if (Arch && Arch->ArchetypeId == ArchetypeId)
+		{
+			return Arch;
+		}
+	}
+	return nullptr;
 }
 
 void ASBSiegeGameState::ServerSetPhase(ESBMatchPhase NewPhase)
@@ -32,7 +59,7 @@ void ASBSiegeGameState::ServerSetPhase(ESBMatchPhase NewPhase)
 	if (HasAuthority() && Phase != NewPhase)
 	{
 		Phase = NewPhase;
-		OnRep_Phase(); // Fire locally on the listen/dedicated server too.
+		OnRep_Phase();
 	}
 }
 

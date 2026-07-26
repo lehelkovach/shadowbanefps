@@ -7,6 +7,8 @@
 #include "SBTypes.h"
 #include "SBSiegeGameState.generated.h"
 
+class USBCharacterArchetype;
+
 /** Fired on all clients when the match phase changes (UI, music, VO cues). */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSBOnPhaseChanged, ESBMatchPhase, NewPhase);
 
@@ -26,6 +28,7 @@ class SHADOWBANEFPS_API ASBSiegeGameState : public AGameStateBase
 public:
 	ASBSiegeGameState();
 
+	virtual void BeginPlay() override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	/** Seconds left in regulation. Derived from the replicated deadline + server time. */
@@ -45,6 +48,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Siege")
 	float GetFinalObjectiveProgress() const { return FinalObjectiveProgress; }
 
+	/** Local (non-replicated) roster copy used to resolve archetype ids on all machines. */
+	UFUNCTION(BlueprintPure, Category = "Siege")
+	USBCharacterArchetype* FindArchetypeById(FName ArchetypeId) const;
+
+	UFUNCTION(BlueprintPure, Category = "Siege")
+	const TArray<TObjectPtr<USBCharacterArchetype>>& GetLocalRoster() const { return LocalRoster; }
+
 	// --- Server-authoritative setters (called by the GameMode) ---
 	void ServerSetPhase(ESBMatchPhase NewPhase);
 	void ServerSetConquestStage(ESBConquestStage NewStage);
@@ -61,6 +71,10 @@ public:
 	FSBOnConquestStageChanged OnConquestStageChanged;
 
 protected:
+	/** Built identically on server and clients from USBPilotRoster. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<USBCharacterArchetype>> LocalRoster;
+
 	UPROPERTY(ReplicatedUsing = OnRep_Phase, BlueprintReadOnly, Category = "Siege")
 	ESBMatchPhase Phase = ESBMatchPhase::WaitingToStart;
 

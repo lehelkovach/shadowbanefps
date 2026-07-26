@@ -9,20 +9,14 @@
 
 class ASBSiegeGameState;
 class ASBPlayerState;
+class ASBPlayerController;
+class ASBSpawnPoint;
 class USBCharacterArchetype;
+class ASBBrokenCitadelBuilder;
 
 /**
  * Server-authoritative match flow for the 20-minute conquest siege pilot.
- *
- * Responsibilities (design doc §5, §8, §9):
- *  - Assign teams (attackers vs defenders).
- *  - Run the regulation clock and drive phase transitions for pacing/telemetry.
- *  - Advance conquest stages when the courtyard / inner keep are taken.
- *  - Track final-objective progress and resolve victory, including overtime.
- *  - Handle respawns and post-death character switching, enforcing roster rules.
- *
- * This class is intentionally logic-only so it can run headless on a Linux
- * dedicated server (OCI VM). Presentation is client-side. See docs/SETUP.md.
+ * See docs/game-design.md §5, §8, §9.
  */
 UCLASS()
 class SHADOWBANEFPS_API ASBSiegeGameMode : public AGameModeBase
@@ -32,75 +26,79 @@ class SHADOWBANEFPS_API ASBSiegeGameMode : public AGameModeBase
 public:
 	ASBSiegeGameMode();
 
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
 
-	// --- Tunables (design doc §1, §8, §9) ---
-
-	/** Regulation length in seconds. Default 20 minutes. */
 	UPROPERTY(EditDefaultsOnly, Category = "Rules|Timing")
 	float RegulationSeconds = 20.f * 60.f;
 
-	/** Delay before a dead player may re-enter. See §9. */
 	UPROPERTY(EditDefaultsOnly, Category = "Rules|Timing")
 	float RespawnDelaySeconds = 8.f;
 
-	/** Extra confirmation window for defenders to clear the objective in overtime. */
 	UPROPERTY(EditDefaultsOnly, Category = "Rules|Timing")
 	float OvertimeClearConfirmSeconds = 5.f;
 
-	/** Phase 1 -> Phase 2 boundary (seconds elapsed). Pacing target only. */
 	UPROPERTY(EditDefaultsOnly, Category = "Rules|Timing")
 	float BreachPhaseElapsedSeconds = 6.f * 60.f;
 
-	/** Phase 2 -> Phase 3 boundary (seconds elapsed). Pacing target only. */
 	UPROPERTY(EditDefaultsOnly, Category = "Rules|Timing")
 	float InnerAssaultPhaseElapsedSeconds = 12.f * 60.f;
 
-	/** Curated pilot roster (~8-12 pre-built characters). See §3, §12. */
+	/** If empty at BeginPlay, the default pilot roster is generated in code. */
 	UPROPERTY(EditDefaultsOnly, Category = "Rules|Roster")
 	TArray<TObjectPtr<USBCharacterArchetype>> Roster;
 
-	// --- Match flow (server authority) ---
+	UPROPERTY(EditDefaultsOnly, Category = "Rules|Map")
+	bool bAutoBuildBrokenCitadel = true;
 
-	/** Called when the objective interaction is completed by attackers (§5). */
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	void NotifyFinalObjectiveCompleted();
 
-	/** Called when a conquest zone (e.g. the courtyard) is captured (§7). */
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	void AdvanceConquestStage(ESBConquestStage NewStage);
 
-	/** Request a (re)deploy as an archetype. Validated against roster rules (§9). */
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	bool RequestSelectArchetype(ASBPlayerState* PlayerState, USBCharacterArchetype* Archetype);
 
-	/** Report a player's death; starts their respawn timer (§9). */
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	void NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState* Killer);
+
+	/** Returns a roster entry by index, or null. */
+	UFUNCTION(BlueprintPure, Category = "Siege")
+	USBCharacterArchetype* GetRosterArchetype(int32 Index) const;
+
+	/** Spawns (or respawns) the player using their selected archetype. */
+	bool SpawnPlayerFromController(APlayerController* PC);
 
 protected:
 	virtual void BeginPlay() override;
 
+	void EnsureRoster();
+	void EnsureCitadel();
 	void StartMatch();
 	void UpdatePhaseForElapsed();
+	void UpdateInnerKeepStageFromPressure();
 	void EndMatch(ESBMatchResult Result);
 
-	/** Returns true if adding Archetype to Team would respect duplicate limits (§3). */
-	bool CanTeamUseArchetype(ESBTeam Team, const USBCharacterArchetype* Archetype) const;
-
-	/** Balances the next joiner onto the smaller side. */
+	bool CanTeamUseArchetype(ESBTeam Team, const USBCharacterArchetype* Archetype, const ASBPlayerState* Ignoring = nullptr) const;
 	ESBTeam PickTeamForNewPlayer() const;
+	USBCharacterArchetype* FindDefaultArchetypeForTeam(ESBTeam Team) const;
+	ASBSpawnPoint* FindSpawnPoint(ESBTeam Team, const USBCharacterArchetype* Archetype) const;
+
+	void ScheduleRespawn(APlayerController* PC);
 
 	UPROPERTY(Transient)
 	TObjectPtr<ASBSiegeGameState> SiegeState = nullptr;
 
+	UPROPERTY(Transient)
+	TObjectPtr<ASBBrokenCitadelBuilder> CitadelBuilder = nullptr;
+
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle PhaseTickHandle;
 
-	/** Server-world-time at which regulation ends. */
 	double RegulationDeadline = 0.0;
-
-	/** True once overtime has begun so we don't restart it. */
 	bool bInOvertime = false;
 
 private:

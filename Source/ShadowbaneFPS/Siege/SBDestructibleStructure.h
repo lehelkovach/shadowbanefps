@@ -7,17 +7,13 @@
 #include "Core/SBTypes.h"
 #include "SBDestructibleStructure.generated.h"
 
-/** Fires on all clients when the structure's damage state changes (swap meshes/VFX). */
+class UStaticMeshComponent;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSBOnStructureStateChanged, ESBStructureState, NewState);
 
 /**
  * A gate, breach wall, emplacement, beacon, or barricade with intact / damaged /
  * destroyed states and clear gameplay consequences (design doc §7).
- *
- * Destruction is functional, not fully dynamic: crossing thresholds swaps state
- * and (optionally) opens a path / disables a defense. Defenders may repair a
- * *damaged* structure; a fully *destroyed* structure stays destroyed for the
- * rest of the first pilot match.
  */
 UCLASS()
 class SHADOWBANEFPS_API ASBDestructibleStructure : public AActor
@@ -29,11 +25,9 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	/** Server-only. Applies siege/ability damage and updates state thresholds. */
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	void ApplyStructureDamage(float Amount);
 
-	/** Server-only. Defender repair; cannot revive a fully destroyed structure (§7). */
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	void Repair(float Amount);
 
@@ -47,14 +41,15 @@ public:
 	FSBOnStructureStateChanged OnStructureStateChanged;
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Siege")
+	TObjectPtr<UStaticMeshComponent> Mesh;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Siege", meta = (ClampMin = "1.0"))
 	float MaxHealth = 1000.f;
 
-	/** Below this fraction the structure becomes Damaged. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Siege", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float DamagedThreshold = 0.5f;
 
-	/** If true, once destroyed it can never be repaired (default pilot behaviour). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Siege")
 	bool bDestructionIsPermanent = true;
 
@@ -66,8 +61,8 @@ protected:
 
 	virtual void BeginPlay() override;
 
-	/** Server-only. Recomputes State from Health and broadcasts on change. */
 	void RefreshState();
+	void ApplyVisualState();
 
 	UFUNCTION()
 	void OnRep_State();

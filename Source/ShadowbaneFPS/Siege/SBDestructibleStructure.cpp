@@ -1,6 +1,9 @@
 // Copyright shadowbanefps.
 
 #include "SBDestructibleStructure.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "UObject/ConstructorHelpers.h"
 #include "Net/UnrealNetwork.h"
 
 ASBDestructibleStructure::ASBDestructibleStructure()
@@ -8,6 +11,17 @@ ASBDestructibleStructure::ASBDestructibleStructure()
 	bReplicates = true;
 	SetReplicateMovement(false);
 	PrimaryActorTick.bCanEverTick = false;
+
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	SetRootComponent(Mesh);
+	Mesh->SetCollisionProfileName(TEXT("BlockAll"));
+	Mesh->SetRelativeScale3D(FVector(1.5f, 8.f, 4.f));
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> Cube(TEXT("/Engine/BasicShapes/Cube.Cube"));
+	if (Cube.Succeeded())
+	{
+		Mesh->SetStaticMesh(Cube.Object);
+	}
 }
 
 void ASBDestructibleStructure::BeginPlay()
@@ -18,6 +32,7 @@ void ASBDestructibleStructure::BeginPlay()
 	{
 		RefreshState();
 	}
+	ApplyVisualState();
 }
 
 void ASBDestructibleStructure::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -45,7 +60,6 @@ void ASBDestructibleStructure::Repair(float Amount)
 		return;
 	}
 
-	// A fully destroyed structure stays destroyed in the first pilot (design §7).
 	if (State == ESBStructureState::Destroyed && bDestructionIsPermanent)
 	{
 		return;
@@ -72,13 +86,38 @@ void ASBDestructibleStructure::RefreshState()
 	if (NewState != State)
 	{
 		State = NewState;
-		OnRep_State(); // Reflect on the server as well.
-		// TODO: on Destroyed, open the associated path / disable the defense and
-		// notify the GameMode so conquest routes update (design doc §7).
+		OnRep_State();
 	}
 }
 
 void ASBDestructibleStructure::OnRep_State()
 {
+	ApplyVisualState();
 	OnStructureStateChanged.Broadcast(State);
+}
+
+void ASBDestructibleStructure::ApplyVisualState()
+{
+	if (!Mesh)
+	{
+		return;
+	}
+
+	switch (State)
+	{
+	case ESBStructureState::Intact:
+		Mesh->SetVisibility(true);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		Mesh->SetRelativeScale3D(FVector(1.5f, 8.f, 4.f));
+		break;
+	case ESBStructureState::Damaged:
+		Mesh->SetVisibility(true);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		Mesh->SetRelativeScale3D(FVector(1.2f, 8.f, 3.f));
+		break;
+	case ESBStructureState::Destroyed:
+		Mesh->SetVisibility(false);
+		Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		break;
+	}
 }

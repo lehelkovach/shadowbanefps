@@ -71,12 +71,42 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shadowbane")
 	FText Discipline;
 
-	/** The pawn spawned for this archetype (abilities, mesh, movement, etc.). */
+	/** The pawn spawned for this archetype. Empty = use the shared ASBCharacter. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gameplay")
 	TSoftClassPtr<APawn> PawnClass;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gameplay")
 	FSBRoleProfile RoleProfile;
+
+	/** Combat / traversal stats applied to the shared pawn at spawn. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float MaxHealth = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float MoveSpeed = 600.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float AttackDamage = 18.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float AttackRange = 2500.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float AttackInterval = 0.35f;
+
+	/** Multiplier when damaging ASBDestructibleStructure actors. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float StructureDamage = 25.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float HealPerSecond = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float RepairPerSecond = 0.f;
+
+	/** Short readable signature used by the intel / death-recap systems (§4). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Intel")
+	FText ObservableSignature;
 
 	/** Some archetypes only make sense on one side (e.g. defender emplacement crew). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gameplay")
@@ -94,5 +124,5 @@ public:
 
 	/** Max copies of this archetype allowed per team (0 = unlimited). See §3, §9. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rules", meta = (ClampMin = "0"))
-	int32 PerTeamDuplicateLimit = 0;
+	int32 PerTeamDuplicateLimit = 1;
 };

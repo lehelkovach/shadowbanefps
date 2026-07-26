@@ -44,8 +44,8 @@ void ASBConquestObjective::Tick(float DeltaSeconds)
 
 	ASBSiegeGameState* GS = GetWorld()->GetGameState<ASBSiegeGameState>();
 
-	// Gate on reaching the inner keep (design doc §5, §7).
-	if (bRequireInnerKeepStage && GS && GS->GetConquestStage() != ESBConquestStage::InnerKeep)
+	// Unlock once the fortress interior is in play (courtyard held or deeper).
+	if (bRequireInnerKeepStage && GS && GS->GetConquestStage() == ESBConquestStage::OuterSiege)
 	{
 		return;
 	}
