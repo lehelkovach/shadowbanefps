@@ -5,6 +5,7 @@
 #include "Core/SBPlayerState.h"
 #include "Core/SBSiegeGameMode.h"
 #include "Core/SBTypes.h"
+#include "Core/SBLog.h"
 #include "Siege/SBDestructibleStructure.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -112,6 +113,9 @@ void ASBCharacter::ApplyArchetype(USBCharacterArchetype* InArchetype)
 	{
 		Move->MaxWalkSpeed = InArchetype->MoveSpeed;
 	}
+
+	UE_LOG(LogShadowbane, Verbose, TEXT("Applied archetype %s hp=%.0f speed=%.0f dmg=%.0f siege=%.0f"),
+		*InArchetype->ArchetypeId.ToString(), MaxHealth, InArchetype->MoveSpeed, AttackDamage, StructureDamage);
 
 	UpdateTeamBodyColor();
 }
@@ -311,6 +315,9 @@ float ASBCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	const float Applied = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 	Health = FMath::Max(0.f, Health - Applied);
 
+	UE_LOG(LogShadowbaneCombat, Verbose, TEXT("%s took %.1f damage (hp %.0f/%.0f)"),
+		*GetName(), Applied, Health, MaxHealth);
+
 	if (Health <= 0.f)
 	{
 		Die(EventInstigator);
@@ -328,6 +335,10 @@ void ASBCharacter::Die(AController* KillerController)
 
 	ASBPlayerState* VictimPS = GetPlayerState<ASBPlayerState>();
 	ASBPlayerState* KillerPS = KillerController ? KillerController->GetPlayerState<ASBPlayerState>() : nullptr;
+
+	UE_LOG(LogShadowbane, Log, TEXT("%s died (archetype=%s)"),
+		*GetName(),
+		Archetype ? *Archetype->ArchetypeId.ToString() : TEXT("none"));
 
 	if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
 	{

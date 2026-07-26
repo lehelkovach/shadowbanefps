@@ -13,6 +13,7 @@ class ASBPlayerController;
 class ASBSpawnPoint;
 class USBCharacterArchetype;
 class ASBBrokenCitadelBuilder;
+class USBMatchTelemetry;
 
 /**
  * Server-authoritative match flow for the 20-minute conquest siege pilot.
@@ -72,6 +73,10 @@ public:
 	/** Spawns (or respawns) the player using their selected archetype. */
 	bool SpawnPlayerFromController(APlayerController* PC);
 
+	/** Match telemetry sink (design doc §12). Valid after StartMatch. */
+	UFUNCTION(BlueprintPure, Category = "Siege|Telemetry")
+	USBMatchTelemetry* GetTelemetry() const { return Telemetry; }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -95,11 +100,15 @@ protected:
 	UPROPERTY(Transient)
 	TObjectPtr<ASBBrokenCitadelBuilder> CitadelBuilder = nullptr;
 
+	UPROPERTY(Transient)
+	TObjectPtr<USBMatchTelemetry> Telemetry = nullptr;
+
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle PhaseTickHandle;
 
 	double RegulationDeadline = 0.0;
 	bool bInOvertime = false;
+	ESBMatchPhase LastLoggedPhase = ESBMatchPhase::WaitingToStart;
 
 private:
 	void HandleRegulationExpired();

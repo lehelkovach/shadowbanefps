@@ -13,6 +13,8 @@ game — and leaves progression, economy, and persistence out of scope.
 - **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
   Windows build, **friend Local Cursor Agent onboarding** (§5), and OCI
   dedicated-server plan.
+- **[Testing & logging](docs/TESTING.md)** — automation tests, log categories,
+  telemetry CSV, headless run script.
 
 ## Status
 Playable greybox pilot in progress. Engine target **UE 5.5** (`ShadowbaneFPS.uproject`).
@@ -25,6 +27,8 @@ Implemented (C++ / server-authoritative):
 - Runtime **Broken Citadel** greybox (no `.umap` required yet)
 - Destructible gate/breach, courtyard capture, final keep objective
 - Debug HUD (timer, phase, stage, HP, roster)
+- Logging (`LogShadowbane*`) + match telemetry CSV (`Saved/Telemetry/`)
+- Automation tests under `ShadowbaneFPS.*` (see `docs/TESTING.md`)
 
 See [`docs/SETUP.md`](docs/SETUP.md) to build/run on a Windows GPU machine.
 

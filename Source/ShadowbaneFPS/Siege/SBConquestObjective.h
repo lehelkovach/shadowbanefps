@@ -57,6 +57,8 @@ protected:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
 	bool bContested = false;
 
+	bool bLoggedFirstAttempt = false;
+
 	virtual void BeginPlay() override;
 
 	void CountOccupants(int32& OutAttackers, int32& OutDefenders) const;

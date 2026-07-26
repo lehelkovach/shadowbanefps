@@ -1,6 +1,10 @@
 // Copyright shadowbanefps.
 
 #include "SBDestructibleStructure.h"
+#include "Core/SBRulesLibrary.h"
+#include "Core/SBLog.h"
+#include "Core/SBSiegeGameMode.h"
+#include "Core/SBMatchTelemetry.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "UObject/ConstructorHelpers.h"
@@ -72,20 +76,37 @@ void ASBDestructibleStructure::Repair(float Amount)
 void ASBDestructibleStructure::RefreshState()
 {
 	const float Pct = GetHealthPercent();
-
-	ESBStructureState NewState = ESBStructureState::Intact;
-	if (Pct <= 0.f)
-	{
-		NewState = ESBStructureState::Destroyed;
-	}
-	else if (Pct < DamagedThreshold)
-	{
-		NewState = ESBStructureState::Damaged;
-	}
+	const ESBStructureState NewState = USBRulesLibrary::ComputeStructureState(Pct, DamagedThreshold);
 
 	if (NewState != State)
 	{
+		const ESBStructureState OldState = State;
 		State = NewState;
+		UE_LOG(LogShadowbane, Log, TEXT("Structure %s state %s -> %s (hp=%.0f%%)"),
+			*GetName(),
+			*UEnum::GetValueAsString(OldState),
+			*UEnum::GetValueAsString(NewState),
+			Pct * 100.f);
+
+		if (HasAuthority())
+		{
+			if (ASBSiegeGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ASBSiegeGameMode>() : nullptr)
+			{
+				if (USBMatchTelemetry* Telemetry = GM->GetTelemetry())
+				{
+					const FString Tag = Tags.Num() > 0 ? Tags[0].ToString() : GetName();
+					if (NewState == ESBStructureState::Destroyed)
+					{
+						Telemetry->RecordStructure(ESBTelemetryEvent::StructureDestroyed, Tag, Pct);
+					}
+					else
+					{
+						Telemetry->RecordStructure(ESBTelemetryEvent::StructureDamaged, Tag, Pct);
+					}
+				}
+			}
+		}
+
 		OnRep_State();
 	}
 }

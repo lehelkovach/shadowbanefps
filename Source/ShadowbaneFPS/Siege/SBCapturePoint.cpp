@@ -3,6 +3,7 @@
 #include "SBCapturePoint.h"
 #include "Core/SBSiegeGameMode.h"
 #include "Core/SBPlayerState.h"
+#include "Core/SBLog.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
@@ -60,6 +61,8 @@ void ASBCapturePoint::Tick(float DeltaSeconds)
 	if (CaptureProgress >= CaptureSeconds)
 	{
 		bCaptured = true;
+		UE_LOG(LogShadowbane, Log, TEXT("Capture point secured -> stage %s"),
+			*UEnum::GetValueAsString(StageOnCapture));
 		OnRep_Captured();
 		if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
 		{

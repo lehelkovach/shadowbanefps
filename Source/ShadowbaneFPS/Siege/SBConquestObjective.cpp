@@ -4,6 +4,9 @@
 #include "Core/SBSiegeGameMode.h"
 #include "Core/SBSiegeGameState.h"
 #include "Core/SBPlayerState.h"
+#include "Core/SBRulesLibrary.h"
+#include "Core/SBLog.h"
+#include "Core/SBMatchTelemetry.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
@@ -45,7 +48,7 @@ void ASBConquestObjective::Tick(float DeltaSeconds)
 	ASBSiegeGameState* GS = GetWorld()->GetGameState<ASBSiegeGameState>();
 
 	// Unlock once the fortress interior is in play (courtyard held or deeper).
-	if (bRequireInnerKeepStage && GS && GS->GetConquestStage() == ESBConquestStage::OuterSiege)
+	if (bRequireInnerKeepStage && GS && !USBRulesLibrary::IsFinalObjectiveUnlocked(GS->GetConquestStage()))
 	{
 		return;
 	}
@@ -58,6 +61,18 @@ void ASBConquestObjective::Tick(float DeltaSeconds)
 
 	if (Attackers > 0 && Defenders == 0)
 	{
+		if (!bLoggedFirstAttempt && Progress <= 0.f)
+		{
+			bLoggedFirstAttempt = true;
+			UE_LOG(LogShadowbane, Log, TEXT("Final objective first attempt started"));
+			if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
+			{
+				if (USBMatchTelemetry* Telemetry = GM->GetTelemetry())
+				{
+					Telemetry->Record(ESBTelemetryEvent::FinalObjectiveAttempt);
+				}
+			}
+		}
 		Progress = FMath::Min(CompleteSeconds, Progress + DeltaSeconds);
 	}
 	else if (!bContested)

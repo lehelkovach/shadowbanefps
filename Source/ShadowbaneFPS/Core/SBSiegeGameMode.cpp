@@ -5,6 +5,9 @@
 #include "SBPlayerState.h"
 #include "SBPlayerController.h"
 #include "SBSpawnPoint.h"
+#include "SBLog.h"
+#include "SBRulesLibrary.h"
+#include "SBMatchTelemetry.h"
 #include "UI/SBSiegeHUD.h"
 #include "Characters/SBCharacter.h"
 #include "Characters/SBCharacterArchetype.h"
@@ -28,7 +31,12 @@ ASBSiegeGameMode::ASBSiegeGameMode()
 void ASBSiegeGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
+	UE_LOG(LogShadowbane, Log, TEXT("InitGame map=%s options=%s"), *MapName, *Options);
 	EnsureRoster();
+	if (!Telemetry)
+	{
+		Telemetry = USBMatchTelemetry::Create(this);
+	}
 }
 
 void ASBSiegeGameMode::BeginPlay()
@@ -46,6 +54,7 @@ void ASBSiegeGameMode::EnsureRoster()
 	if (Roster.Num() == 0)
 	{
 		USBPilotRoster::BuildDefaultRoster(this, Roster);
+		UE_LOG(LogShadowbane, Log, TEXT("Built default pilot roster (%d archetypes)"), Roster.Num());
 	}
 }
 
@@ -66,6 +75,7 @@ void ASBSiegeGameMode::EnsureCitadel()
 	Params.Name = TEXT("BrokenCitadelBuilder");
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 	CitadelBuilder = GetWorld()->SpawnActor<ASBBrokenCitadelBuilder>(FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	UE_LOG(LogShadowbane, Log, TEXT("Spawned BrokenCitadelBuilder for runtime greybox"));
 }
 
 void ASBSiegeGameMode::PostLogin(APlayerController* NewPlayer)
@@ -89,13 +99,19 @@ void ASBSiegeGameMode::HandleStartingNewPlayer_Implementation(APlayerController*
 		return;
 	}
 
-	PS->SetTeam(PickTeamForNewPlayer());
+	const ESBTeam Team = PickTeamForNewPlayer();
+	PS->SetTeam(Team);
 	PS->SetAlive(false);
 
-	if (USBCharacterArchetype* DefaultArch = FindDefaultArchetypeForTeam(PS->GetTeam()))
+	if (USBCharacterArchetype* DefaultArch = FindDefaultArchetypeForTeam(Team))
 	{
 		PS->SetSelectedArchetype(DefaultArch);
 	}
+
+	UE_LOG(LogShadowbane, Log, TEXT("Player starting: %s -> %s archetype=%s"),
+		*PS->GetPlayerName(),
+		*UEnum::GetValueAsString(Team),
+		*PS->GetSelectedArchetypeId().ToString());
 
 	// Immediate first spawn for the pilot (lobby selection comes later).
 	SpawnPlayerFromController(NewPlayer);
@@ -113,10 +129,21 @@ void ASBSiegeGameMode::StartMatch()
 		return;
 	}
 
+	if (!Telemetry)
+	{
+		Telemetry = USBMatchTelemetry::Create(this);
+	}
+	Telemetry->StartMatchSession();
+
 	RegulationDeadline = GetWorld()->GetTimeSeconds() + RegulationSeconds;
 	SiegeState->ServerSetRegulationDeadline(SiegeState->GetServerWorldTimeSeconds() + RegulationSeconds);
 	SiegeState->ServerSetPhase(ESBMatchPhase::Recon);
 	SiegeState->ServerSetConquestStage(ESBConquestStage::OuterSiege);
+	LastLoggedPhase = ESBMatchPhase::Recon;
+	Telemetry->RecordPhase(ESBMatchPhase::Recon);
+
+	UE_LOG(LogShadowbane, Log, TEXT("Match started: regulation=%.0fs roster=%d"),
+		RegulationSeconds, Roster.Num());
 
 	GetWorldTimerManager().SetTimer(
 		MatchTimerHandle, this, &ASBSiegeGameMode::HandleRegulationExpired, RegulationSeconds, false);
@@ -154,6 +181,16 @@ void ASBSiegeGameMode::UpdatePhaseForElapsed()
 	if (Desired != SiegeState->GetPhase())
 	{
 		SiegeState->ServerSetPhase(Desired);
+		if (Desired != LastLoggedPhase)
+		{
+			LastLoggedPhase = Desired;
+			UE_LOG(LogShadowbane, Log, TEXT("Phase -> %s (elapsed=%.1fs)"),
+				*UEnum::GetValueAsString(Desired), Elapsed);
+			if (Telemetry)
+			{
+				Telemetry->RecordPhase(Desired);
+			}
+		}
 	}
 }
 
@@ -189,12 +226,20 @@ void ASBSiegeGameMode::AdvanceConquestStage(ESBConquestStage NewStage)
 		return;
 	}
 
-	if (static_cast<uint8>(NewStage) < static_cast<uint8>(SiegeState->GetConquestStage()))
+	const ESBConquestStage Current = SiegeState->GetConquestStage();
+	if (!USBRulesLibrary::CanAdvanceConquestStage(Current, NewStage) || NewStage == Current)
 	{
-		return; // Never move the front line backwards in the first pilot.
+		return;
 	}
 
 	SiegeState->ServerSetConquestStage(NewStage);
+	UE_LOG(LogShadowbane, Log, TEXT("Conquest stage %s -> %s"),
+		*UEnum::GetValueAsString(Current),
+		*UEnum::GetValueAsString(NewStage));
+	if (Telemetry)
+	{
+		Telemetry->RecordConquestStage(NewStage);
+	}
 
 	if (NewStage == ESBConquestStage::Courtyard && SiegeState->GetPhase() == ESBMatchPhase::Recon)
 	{
@@ -213,6 +258,12 @@ void ASBSiegeGameMode::NotifyFinalObjectiveCompleted()
 		return;
 	}
 
+	UE_LOG(LogShadowbane, Log, TEXT("Final objective completed — Attackers win"));
+	if (Telemetry)
+	{
+		Telemetry->Record(ESBTelemetryEvent::FinalObjectiveCompleted);
+	}
+
 	if (SiegeState)
 	{
 		SiegeState->ServerSetFinalObjectiveProgress(1.f);
@@ -227,16 +278,22 @@ void ASBSiegeGameMode::HandleRegulationExpired()
 		return;
 	}
 
-	const bool bObjectiveContested = SiegeState->GetFinalObjectiveProgress() > 0.f
-		&& SiegeState->GetFinalObjectiveProgress() < 1.f;
-
-	if (bObjectiveContested && !bInOvertime)
+	const float Progress = SiegeState->GetFinalObjectiveProgress();
+	if (USBRulesLibrary::ShouldEnterOvertime(Progress) && !bInOvertime)
 	{
 		bInOvertime = true;
 		SiegeState->ServerSetPhase(ESBMatchPhase::Overtime);
+		UE_LOG(LogShadowbane, Log, TEXT("Regulation expired with contested objective (%.0f%%) — OVERTIME"),
+			Progress * 100.f);
+		if (Telemetry)
+		{
+			Telemetry->Record(ESBTelemetryEvent::OvertimeStarted,
+				FString::Printf(TEXT("progress=%.2f"), Progress));
+		}
 		return;
 	}
 
+	UE_LOG(LogShadowbane, Log, TEXT("Regulation expired — Defenders win"));
 	EndMatch(ESBMatchResult::DefendersWin);
 }
 
@@ -253,7 +310,12 @@ void ASBSiegeGameMode::EndMatch(ESBMatchResult Result)
 	SiegeState->ServerSetResult(Result);
 	SiegeState->ServerSetPhase(ESBMatchPhase::Finished);
 
-	// Freeze pawns lightly by disabling input on all controllers.
+	UE_LOG(LogShadowbane, Log, TEXT("Match finished: %s"), *UEnum::GetValueAsString(Result));
+	if (Telemetry)
+	{
+		Telemetry->EndMatchSession(Result);
+	}
+
 	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
 	{
 		if (APlayerController* PC = It->Get())
@@ -278,6 +340,7 @@ bool ASBSiegeGameMode::RequestSelectArchetype(ASBPlayerState* PlayerState, USBCh
 
 	if (PlayerState->IsAlive())
 	{
+		UE_LOG(LogShadowbane, Verbose, TEXT("Archetype select rejected (alive): %s"), *PlayerState->GetPlayerName());
 		return false;
 	}
 
@@ -286,19 +349,37 @@ bool ASBSiegeGameMode::RequestSelectArchetype(ASBPlayerState* PlayerState, USBCh
 	if ((Team == ESBTeam::Attackers && !Archetype->bAttackerEligible)
 		|| (Team == ESBTeam::Defenders && !Archetype->bDefenderEligible))
 	{
+		UE_LOG(LogShadowbane, Warning, TEXT("Archetype %s not eligible for %s"),
+			*Archetype->ArchetypeId.ToString(),
+			*UEnum::GetValueAsString(Team));
 		return false;
 	}
 
 	if (!CanTeamUseArchetype(Team, Archetype, PlayerState))
 	{
+		UE_LOG(LogShadowbane, Warning, TEXT("Archetype %s duplicate limit reached for %s"),
+			*Archetype->ArchetypeId.ToString(),
+			*UEnum::GetValueAsString(Team));
 		return false;
 	}
 
+	const FName FromId = PlayerState->GetSelectedArchetypeId();
 	PlayerState->SetSelectedArchetype(Archetype);
+
+	UE_LOG(LogShadowbane, Log, TEXT("Archetype switch: %s %s -> %s"),
+		*PlayerState->GetPlayerName(),
+		*FromId.ToString(),
+		*Archetype->ArchetypeId.ToString());
+
+	if (Telemetry && FromId != Archetype->ArchetypeId)
+	{
+		Telemetry->RecordArchetypeSwitch(PlayerState->GetPlayerName(), FromId, Archetype->ArchetypeId);
+	}
+
 	return true;
 }
 
-void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState* /*Killer*/)
+void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState* Killer)
 {
 	if (!HasAuthority() || !Victim)
 	{
@@ -306,6 +387,19 @@ void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState
 	}
 
 	Victim->SetAlive(false);
+
+	UE_LOG(LogShadowbane, Log, TEXT("Player killed: victim=%s killer=%s archetype=%s"),
+		*Victim->GetPlayerName(),
+		Killer ? *Killer->GetPlayerName() : TEXT("none"),
+		*Victim->GetSelectedArchetypeId().ToString());
+
+	if (Telemetry)
+	{
+		Telemetry->RecordPlayerKill(
+			Victim->GetPlayerName(),
+			Killer ? Killer->GetPlayerName() : TEXT("none"),
+			Victim->GetSelectedArchetypeId());
+	}
 
 	if (APlayerController* PC = Cast<APlayerController>(Victim->GetOwningController()))
 	{
@@ -399,12 +493,23 @@ bool ASBSiegeGameMode::SpawnPlayerFromController(APlayerController* PC)
 		SBPC->ServerBeginRespawnCountdown(0.f);
 	}
 
+	UE_LOG(LogShadowbane, Log, TEXT("Spawned %s as %s at %s (pad=%s)"),
+		*PS->GetPlayerName(),
+		*Archetype->ArchetypeId.ToString(),
+		*Location.ToCompactString(),
+		Spot ? *Spot->GetName() : TEXT("fallback"));
+
+	if (Telemetry)
+	{
+		Telemetry->RecordPlayerSpawn(PS->GetPlayerName(), PS->GetTeam(), Archetype->ArchetypeId);
+	}
+
 	return true;
 }
 
 bool ASBSiegeGameMode::CanTeamUseArchetype(ESBTeam Team, const USBCharacterArchetype* Archetype, const ASBPlayerState* Ignoring) const
 {
-	if (!Archetype || Archetype->PerTeamDuplicateLimit <= 0 || !GameState)
+	if (!Archetype || !GameState)
 	{
 		return true;
 	}
@@ -422,7 +527,7 @@ bool ASBSiegeGameMode::CanTeamUseArchetype(ESBTeam Team, const USBCharacterArche
 			++Count;
 		}
 	}
-	return Count < Archetype->PerTeamDuplicateLimit;
+	return USBRulesLibrary::CanUseArchetypeSlot(Count, Archetype->PerTeamDuplicateLimit);
 }
 
 ESBTeam ASBSiegeGameMode::PickTeamForNewPlayer() const
@@ -440,7 +545,7 @@ ESBTeam ASBSiegeGameMode::PickTeamForNewPlayer() const
 			}
 		}
 	}
-	return (Attackers <= Defenders) ? ESBTeam::Attackers : ESBTeam::Defenders;
+	return USBRulesLibrary::PickBalancedTeam(Attackers, Defenders);
 }
 
 USBCharacterArchetype* ASBSiegeGameMode::FindDefaultArchetypeForTeam(ESBTeam Team) const
