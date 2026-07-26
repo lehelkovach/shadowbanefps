@@ -11,15 +11,23 @@ plan**.
 
 ---
 
-## 1. Roles of your two machines
+## 1. Roles of the machines
 
 | Machine | GPU | Recommended role |
 | --- | --- | --- |
-| Lenovo Yoga 7i | Intel Iris Xe (integrated) | Code/blueprint editing, git, docs, light iteration. The Unreal Editor *runs* but real-time gameplay will be rough. Fine as a second client for netcode testing. |
-| MSI gaming laptop | Dedicated NVIDIA GPU | **Primary dev + client test machine.** Install the full engine, compile C++, run the editor, package the game client, and drive playtests here. |
+| Lenovo Yoga 7i | Intel Arc (integrated) | Code/docs, git, light iteration, **local headless server**, second low-settings client. |
+| MSI gaming laptop | Dedicated NVIDIA GPU | Primary personal client/editor machine. |
+| Friend's gaming rig | Strong dedicated GPU | **Best place for Local Cursor Agent + client build/playtest.** This is where Unreal Editor and PIE should live. |
 
 You do **not** need a beefy GPU for the *server* — the dedicated server is
-headless. That's what the OCI VM is for (section 4).
+headless. That's what the OCI VM is for (section 4), or a local headless
+process on the Yoga / friend's box.
+
+> **Cloud Agent (me) vs Local Agent (friend's Cursor Desktop):** I write code and
+> open PRs from a cloud VM with **no GPU / no Unreal install**. Your friend's
+> machine runs **Cursor Desktop → Agent**, which can drive the real local
+> toolchain (compile, launch editor/game). That is the right way to build and
+> test the Unreal *client*.
 
 ---
 
@@ -150,12 +158,152 @@ command. Give me SSH access or run the scripts yourself — either works.
 
 ---
 
-## 5. Quick start checklist
+## 5. Friend / collaborator onboarding (Local Cursor Agent)
 
-- [ ] Link Epic ↔ GitHub; install UE 5.5 on the MSI laptop.
+This is how your friend's gaming rig becomes a real Unreal client build+test
+station. **Yes — Cursor still does local dev.** Cursor Desktop is local-first;
+Cloud Agents are an optional extra. Friend uses Desktop Agent on their PC.
+
+### 5.1 One-time: give them repo access
+1. On GitHub (`lehelkovach/shadowbanefps`), **Settings → Collaborators → Add**
+   their GitHub username (Write access).
+2. They accept the invite in email / GitHub.
+3. They install [Cursor Desktop](https://cursor.com/download) and sign in with
+   *their own* Cursor account (they do **not** need yours).
+
+### 5.2 One-time: install the Unreal toolchain on their PC
+Same stack as section 2 — friend needs **their own** Epic account:
+
+1. Epic Games account → accept Unreal EULA → install Epic Launcher → install
+   **UE 5.5** (must match `EngineAssociation` in `ShadowbaneFPS.uproject`).
+2. Optional but recommended for server packaging later: link Epic ↔ GitHub at
+   <https://www.unrealengine.com/en-US/ue-on-github>.
+3. **Visual Studio 2022** with workload **"Game development with C++"**
+   (MSVC + .NET desktop components).
+4. **Git** + **Git LFS**: `git lfs install`
+5. Clone and open in Cursor:
+   ```powershell
+   git clone https://github.com/lehelkovach/shadowbanefps.git
+   cd shadowbanefps
+   git checkout cursor/ue5-conquest-siege-pilot-scaffold-e6f0
+   cursor .
+   ```
+6. Free disk: UE + Intermediate/DerivedDataCache wants **~80–150+ GB** free.
+   32 GB RAM is comfortable; 16 GB works but will page.
+
+### 5.3 Cursor Agent settings that matter for Unreal builds
+UnrealBuildTool lives **outside** the repo (under the Epic install), so the
+default Agent sandbox often can't see it.
+
+On the friend's machine, in Cursor Agent:
+
+- Prefer **Allowlist** (or temporarily **Run Everything**) for build nights —
+  Auto-review will otherwise spam approval prompts on every UBT invocation.
+  Docs: [Run Modes](https://cursor.com/docs/agent/security/run-modes).
+- Allow terminal access to the engine tree (example path — adjust to their
+  install), e.g. via `~/.cursor/sandbox.json` / permissions allowlist:
+  - `C:\Program Files\Epic Games\UE_5.5\**`
+  - Network if they use marketplace/LFS remotes.
+- First compile can take **30–90+ minutes**. Keep Cursor open; don't treat it
+  like a 30s script. If the Agent stalls waiting for approval mid-build, click
+  Allow / add to allowlist and re-prompt.
+
+Local Agent **can**: edit code, run shell commands (generate project files,
+  compile, launch `UnrealEditor.exe` / packaged game), read build logs, fix
+  compile errors, open a browser.
+Local Agent **cannot** (today): fully drive the Unreal Editor UI like a human
+  (viewport clicking, Blueprint node wiring by mouse). Treat PIE / feel-testing
+  as a **human** job; treat compile + launch + log triage as an **Agent** job.
+
+### 5.4 Exact build + launch commands (Windows)
+
+Set `UE` to their engine root once per shell:
+
+```powershell
+$UE = "C:\Program Files\Epic Games\UE_5.5"
+$PROJ = "$PWD\ShadowbaneFPS.uproject"
+```
+
+**Generate project files** (first clone, or after adding C++ files):
+```powershell
+& "$UE\Engine\Build\BatchFiles\Build.bat" -projectfiles -project="$PROJ" -game -engine -progress
+```
+
+**Compile Development Editor** (what you need to open the project):
+```powershell
+& "$UE\Engine\Build\BatchFiles\Build.bat" ShadowbaneFPSEditor Win64 Development -Project="$PROJ" -WaitMutex
+```
+
+**Launch the editor** (human does PIE / map work after it opens):
+```powershell
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ"
+```
+
+**Launch a standalone game client** (no editor chrome — good for playtest):
+```powershell
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" -game -windowed -ResX=1920 -ResY=1080 -log
+```
+
+**Local listen-server smoke** (one process hosts, second joins — early netcheck):
+```powershell
+# Terminal A — host
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" -game -log
+
+# Terminal B — client join (after host is up)
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" 127.0.0.1:7777 -game -log
+```
+
+Once an OCI dedicated server exists (section 4), clients join with the VM IP:
+```powershell
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" YOUR.OCI.IP:7777 -game -log
+```
+
+### 5.5 Prompt the friend's Local Agent with this
+
+Paste something like this into **Cursor Desktop → Agent** on their rig:
+
+> You are on the Unreal client machine for `shadowbanefps`.
+> Engine is UE 5.5 at `C:\Program Files\Epic Games\UE_5.5`.
+> Read `docs/SETUP.md` §5 and `docs/game-design.md`.
+> 1) Confirm the engine path exists.
+> 2) Generate project files, then build `ShadowbaneFPSEditor` Win64 Development.
+> 3) If the build fails, fix C++ compile errors and rebuild until it succeeds.
+> 4) Launch the editor with `ShadowbaneFPS.uproject`.
+> 5) Summarize any missing assets/maps (expect `BrokenCitadel` to be missing
+>    until we greybox it) and paste the first fatal log lines.
+> Do not commit secrets. Prefer a feature branch named `cursor/<thing>-e6f0`.
+
+### 5.6 Collaboration rules (so you don't step on each other)
+- **One owner per concern per day:** friend's rig owns *client build / PIE /
+  feel*; Cloud Agent (me) owns scaffolding/PRs; Yoga can own docs + local
+  dedicated-server experiments.
+- Work on **feature branches**, not straight to `main`. Pull before you push.
+- Don't both edit the same C++ files blind — if both need to touch GameMode,
+  coordinate or serialize PRs.
+- Binary assets (`*.uasset` / `*.umap`) go through **Git LFS**. Only one person
+  should author a given asset at a time (UE merge conflicts on assets are pain).
+- Compile errors / crash logs: paste into chat or open an issue — I can fix
+  from the cloud side fast; friend rebuilds locally.
+
+### 5.7 What "done" looks like for their first session
+- [ ] Repo cloned on friend's PC; Cursor Desktop opens the project folder.
+- [ ] UE 5.5 + VS2022 installed; Agent (or human) generated project files.
+- [ ] `ShadowbaneFPSEditor` Win64 Development **builds successfully**.
+- [ ] Editor launches. Missing-map warnings for `BrokenCitadel` are expected
+      until we add the greybox — not a blocker for compiling the framework.
+- [ ] They can run `-game` standalone and (optionally) a local listen+client join.
+- [ ] Any compile errors they hit are pasted back so Cloud Agent can patch them.
+
+---
+
+## 6. Quick start checklist
+
+- [ ] Link Epic ↔ GitHub; install UE 5.5 on at least one strong GPU machine
+      (MSI and/or friend's rig).
 - [ ] Install VS2022 (C++ game dev), Git, Git LFS (`git lfs install`).
-- [ ] Clone repo; generate VS project files; build `Development Editor`.
+- [ ] Add friend as GitHub collaborator; they clone and open in Cursor Desktop.
+- [ ] Friend's Local Agent builds `ShadowbaneFPSEditor` (section 5).
 - [ ] Open `ShadowbaneFPS.uproject`; confirm it loads with the pilot GameMode.
-- [ ] (Server) install the UE Linux cross-compile toolchain.
+- [ ] (Server) install the UE Linux cross-compile toolchain when ready.
 - [ ] Create the OCI VM (section 4) and share access.
 - [ ] Tell me: engine version confirmed? OCI shape/region? x86 or ARM?
