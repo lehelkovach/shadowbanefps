@@ -31,6 +31,7 @@ Implemented (C++ / server-authoritative):
 - Debug HUD (timer, phase, stage, HP, roster)
 - Logging (`LogShadowbane*`) + match telemetry CSV (`Saved/Telemetry/`)
 - Automation tests under `ShadowbaneFPS.*` (see `docs/TESTING.md`)
+- Placeholder art kit: team colors, role rune discs, HUD icon chips, world markers
 
 See [`docs/SETUP.md`](docs/SETUP.md) to build/run on a Windows GPU machine.
 
