@@ -36,7 +36,9 @@ If SSH deploy key is missing, **stop and ask Lehel** for `%USERPROFILE%\.ssh\sha
 | **systemd** | `shadowbanefps-server` |
 | **Branch** | **`dev`** (hot deploy) → merge to `main` when stable |
 
-Docs: `docs/DEV_WORKFLOW.md`, `docs/OCI_DEPLOY.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/game-design.md`
+Docs: `docs/game-design.md` (source of truth), `docs/SCRIPTS.md`, `docs/TESTING.md`,
+`docs/BALANCE_ANALYSIS.md`, `docs/DEV_WORKFLOW.md`, `docs/OCI_DEPLOY.md`, `docs/SETUP.md`,
+`docs/reference/SHADOWBANE_LATE_ERA_BALANCE.md`, `BALANCE_AGENT_INSTRUCTIONS.md`
 
 ---
 

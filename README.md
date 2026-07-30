@@ -90,6 +90,7 @@ scripts/Connect-DevServer.ps1  client → 144.24.46.16:7777
 scripts/RunAutomationTests.ps1 all ShadowbaneFPS.* headless
 scripts/RunClientTests.ps1     ShadowbaneFPS.Client.*
 scripts/RunServerTests.ps1     ShadowbaneFPS.Server.*
+scripts/RunIntegrationTests.ps1 ShadowbaneFPS.Integration.*
 scripts/Analyze-CombatBalance.ps1  query combat_*.csv (build/class/power)
 tools/balance/                 Python analyzer + roster join + fixtures
 BALANCE_AGENT_INSTRUCTIONS.md  **Balance analyst agent prompt**
