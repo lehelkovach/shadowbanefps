@@ -5,6 +5,7 @@
 #include "Core/SBLog.h"
 #include "Core/SBSiegeGameMode.h"
 #include "Core/SBMatchTelemetry.h"
+#include "Core/SBPlayerState.h"
 #include "Art/SBPlaceholderArt.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
@@ -47,7 +48,7 @@ void ASBDestructibleStructure::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	DOREPLIFETIME(ASBDestructibleStructure, Health);
 }
 
-void ASBDestructibleStructure::ApplyStructureDamage(float Amount)
+void ASBDestructibleStructure::ApplyStructureDamage(float Amount, AController* Instigator, FName AttackerArchetype, FName PowerId)
 {
 	if (!HasAuthority() || Amount <= 0.f || State == ESBStructureState::Destroyed)
 	{
@@ -55,6 +56,28 @@ void ASBDestructibleStructure::ApplyStructureDamage(float Amount)
 	}
 
 	Health = FMath::Clamp(Health - Amount, 0.f, MaxHealth);
+
+	if (ASBSiegeGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ASBSiegeGameMode>() : nullptr)
+	{
+		if (USBMatchTelemetry* Telemetry = GM->GetTelemetry())
+		{
+			const ASBPlayerState* KillerPS = Instigator ? Instigator->GetPlayerState<ASBPlayerState>() : nullptr;
+			FSBCombatMetric Metric;
+			Metric.AttackerName = KillerPS ? KillerPS->GetPlayerName() : TEXT("none");
+			Metric.AttackerArchetype = !AttackerArchetype.IsNone() ? AttackerArchetype
+				: (KillerPS ? KillerPS->GetSelectedArchetypeId() : NAME_None);
+			Metric.AttackerTeam = KillerPS ? KillerPS->GetTeam() : ESBTeam::Unassigned;
+			Metric.VictimName = Tags.Num() > 0 ? Tags[0].ToString() : GetName();
+			Metric.VictimArchetype = FName(TEXT("Structure"));
+			Metric.PowerId = PowerId.IsNone() ? FName(TEXT("StructureHit")) : PowerId;
+			Metric.Amount = Amount;
+			Metric.VictimHealthAfter = Health;
+			Metric.bLethal = Health <= 0.f;
+			Metric.Extra = TEXT("structure");
+			Telemetry->RecordCombatDamage(Metric);
+		}
+	}
+
 	RefreshState();
 }
 

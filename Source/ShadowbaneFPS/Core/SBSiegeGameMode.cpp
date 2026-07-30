@@ -400,7 +400,7 @@ bool ASBSiegeGameMode::RequestSelectArchetype(ASBPlayerState* PlayerState, USBCh
 	return true;
 }
 
-void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState* Killer)
+void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState* Killer, FName KillingPowerId)
 {
 	if (!HasAuthority() || !Victim)
 	{
@@ -409,10 +409,12 @@ void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState
 
 	Victim->SetAlive(false);
 
-	UE_LOG(LogShadowbaneServer, Log, TEXT("Player killed: victim=%s killer=%s archetype=%s"),
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Player killed: victim=%s(%s) killer=%s(%s) power=%s"),
 		*Victim->GetPlayerName(),
+		*Victim->GetSelectedArchetypeId().ToString(),
 		Killer ? *Killer->GetPlayerName() : TEXT("none"),
-		*Victim->GetSelectedArchetypeId().ToString());
+		Killer ? *Killer->GetSelectedArchetypeId().ToString() : TEXT("none"),
+		*KillingPowerId.ToString());
 	UE_LOG(LogShadowbane, Log, TEXT("Player killed: victim=%s killer=%s archetype=%s"),
 		*Victim->GetPlayerName(),
 		Killer ? *Killer->GetPlayerName() : TEXT("none"),
@@ -423,7 +425,9 @@ void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState
 		Telemetry->RecordPlayerKill(
 			Victim->GetPlayerName(),
 			Killer ? Killer->GetPlayerName() : TEXT("none"),
-			Victim->GetSelectedArchetypeId());
+			Victim->GetSelectedArchetypeId(),
+			Killer ? Killer->GetSelectedArchetypeId() : NAME_None,
+			KillingPowerId);
 	}
 
 	if (APlayerController* PC = Cast<APlayerController>(Victim->GetOwningController()))

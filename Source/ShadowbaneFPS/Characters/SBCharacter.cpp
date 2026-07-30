@@ -8,6 +8,7 @@
 #include "Core/SBTypes.h"
 #include "Core/SBLog.h"
 #include "Core/SBRulesLibrary.h"
+#include "Core/SBMatchTelemetry.h"
 #include "Siege/SBDestructibleStructure.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -256,7 +257,9 @@ void ASBCharacter::PerformFire()
 
 	if (ASBDestructibleStructure* Structure = Cast<ASBDestructibleStructure>(Hit.GetActor()))
 	{
-		Structure->ApplyStructureDamage(StructureDamage);
+		Structure->ApplyStructureDamage(StructureDamage, GetController(),
+			Archetype ? Archetype->ArchetypeId : NAME_None,
+			FName(TEXT("BasicFire_Structure")));
 		return;
 	}
 
@@ -271,6 +274,7 @@ void ASBCharacter::PerformFire()
 			return;
 		}
 
+		Target->LastDamagePowerId = FName(TEXT("BasicFire"));
 		Target->TakeDamage(AttackDamage, FDamageEvent(), GetController(), this);
 	}
 }
@@ -304,7 +308,35 @@ void ASBCharacter::PerformSupportTick(float DeltaSeconds)
 
 			if (FVector::DistSquared(Origin, Other->GetActorLocation()) <= HealRadiusSq)
 			{
+				const float Before = Other->Health;
 				Other->Health = FMath::Min(Other->MaxHealth, Other->Health + HealPerSecond * DeltaSeconds);
+				const float Applied = Other->Health - Before;
+				if (Applied > 0.f)
+				{
+					float& Acc = PendingHealTelemetry.FindOrAdd(Other);
+					Acc += Applied;
+					if (Acc >= HealTelemetryFlushAmount)
+					{
+						if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
+						{
+							if (USBMatchTelemetry* Telemetry = GM->GetTelemetry())
+							{
+								FSBCombatMetric Metric;
+								Metric.AttackerName = MyPS->GetPlayerName();
+								Metric.AttackerArchetype = MyPS->GetSelectedArchetypeId();
+								Metric.AttackerTeam = MyPS->GetTeam();
+								Metric.VictimName = TheirPS->GetPlayerName();
+								Metric.VictimArchetype = TheirPS->GetSelectedArchetypeId();
+								Metric.VictimTeam = TheirPS->GetTeam();
+								Metric.PowerId = FName(TEXT("HealAura"));
+								Metric.Amount = Acc;
+								Metric.VictimHealthAfter = Other->Health;
+								Telemetry->RecordCombatHeal(Metric);
+							}
+						}
+						Acc = 0.f;
+					}
+				}
 			}
 		}
 	}
@@ -340,6 +372,34 @@ float ASBCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEve
 	UE_LOG(LogShadowbaneCombat, Verbose, TEXT("%s took %.1f damage (hp %.0f/%.0f)"),
 		*GetName(), Applied, Health, MaxHealth);
 
+	if (Applied > 0.f)
+	{
+		if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
+		{
+			if (USBMatchTelemetry* Telemetry = GM->GetTelemetry())
+			{
+				const ASBPlayerState* VictimPS = GetPlayerState<ASBPlayerState>();
+				const ASBPlayerState* KillerPS = EventInstigator
+					? EventInstigator->GetPlayerState<ASBPlayerState>()
+					: nullptr;
+
+				FSBCombatMetric Metric;
+				Metric.AttackerName = KillerPS ? KillerPS->GetPlayerName() : TEXT("none");
+				Metric.AttackerArchetype = KillerPS ? KillerPS->GetSelectedArchetypeId() : NAME_None;
+				Metric.AttackerTeam = KillerPS ? KillerPS->GetTeam() : ESBTeam::Unassigned;
+				Metric.VictimName = VictimPS ? VictimPS->GetPlayerName() : GetName();
+				Metric.VictimArchetype = VictimPS ? VictimPS->GetSelectedArchetypeId()
+					: (Archetype ? Archetype->ArchetypeId : NAME_None);
+				Metric.VictimTeam = VictimPS ? VictimPS->GetTeam() : ESBTeam::Unassigned;
+				Metric.PowerId = LastDamagePowerId.IsNone() ? FName(TEXT("Unknown")) : LastDamagePowerId;
+				Metric.Amount = Applied;
+				Metric.VictimHealthAfter = Health;
+				Metric.bLethal = Health <= 0.f;
+				Telemetry->RecordCombatDamage(Metric);
+			}
+		}
+	}
+
 	if (Health <= 0.f)
 	{
 		Die(EventInstigator);
@@ -364,7 +424,7 @@ void ASBCharacter::Die(AController* KillerController)
 
 	if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
 	{
-		GM->NotifyPlayerKilled(VictimPS, KillerPS);
+		GM->NotifyPlayerKilled(VictimPS, KillerPS, LastDamagePowerId);
 	}
 
 	DetachFromControllerPendingDestroy();

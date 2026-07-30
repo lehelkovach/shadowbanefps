@@ -293,15 +293,24 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 
 ### Match telemetry
 
+Combat and shop telemetry exist so we can **nerf/buff builds from evidence**, not vibes.
+
 | Category | Record |
 | --- | --- |
 | Pacing | Time to first contact, first structural damage, first breach, courtyard capture, and first final-objective attempt |
 | Map use | Route selection, player heat maps, repeated choke locations, and abandoned spaces |
 | Composition | Character pick rates, opening group patterns, duplicate frequency, and win rate by composition archetype |
 | Shop | Opening buy patterns, gold spent by minute, refund/rebuy rate, item pick rates, win rate by item |
+| **Combat balance** | Per-hit damage/heal with **attacker build → victim build**, power/item id, amount, HP after, lethal flag; kill attribution same way; end-of-match matchup + power summaries |
 | Adaptation | Switch frequency, time of first switch, switches after confirmed intelligence, and post-switch impact |
-| Siege | Structure damage, repair, device uptime, device destruction, and breach method |
+| Siege | Structure damage (by attacker build + power), repair, device uptime, device destruction, and breach method |
 | Outcome | Attacker/defender win rate, average match duration, overtime frequency, and comeback rate |
+
+**Outputs (server / editor):**
+- `Saved/Telemetry/match_<stamp>_<session>.csv` — match flow events (+ `BalanceSummary` rows)
+- `Saved/Telemetry/combat_<stamp>_<session>.csv` — combat rows for spreadsheet / notebook analysis
+
+Use combat CSV to answer: which builds delete which builds, which powers over-perform, lethality spikes after certain shop buys.
 
 ### Playtest questions
 
@@ -319,6 +328,7 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 - Does the final assault feel climactic and understandable?
 - Is 20 minutes the correct duration for a complete conquest arc?
 - Does match-local gold teach anything useful before a future persistent economy?
+- Which build→build matchups or powers look overtuned from combat CSV?
 
 ## 13. Principal Design Risks
 

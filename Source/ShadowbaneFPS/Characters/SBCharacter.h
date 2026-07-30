@@ -82,6 +82,13 @@ protected:
 	float RepairPerSecond = 0.f;
 	float LastFireTime = -1000.f;
 
+	/** Last power that damaged this pawn — used for kill attribution telemetry. */
+	FName LastDamagePowerId = NAME_None;
+
+	/** Batches heal telemetry so aura ticks do not flood the CSV. */
+	TMap<TWeakObjectPtr<ASBCharacter>, float> PendingHealTelemetry;
+	float HealTelemetryFlushAmount = 12.f;
+
 	void MoveForward(float Value);
 	void MoveRight(float Value);
 	void Turn(float Value);

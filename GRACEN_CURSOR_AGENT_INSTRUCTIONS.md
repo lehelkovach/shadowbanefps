@@ -121,6 +121,8 @@ Controls: WASD, mouse, LMB fire, `1-0` switch while dead, `R` respawn.
 Paste failures back if red. Logging categories to filter in Output Log / server journal:
 `LogShadowbaneServer`, `LogShadowbaneClient`, `LogShadowbaneNet`, `LogShadowbaneTelemetry`.
 
+After playtests, pull `Saved/Telemetry/combat_*.csv` (and match CSV) for build/power balance — damage and kills attributed attacker-build → victim-build.
+
 ### D) Implement / iterate gameplay (your job)
 **Source of truth:** `docs/game-design.md` (Draft 1.1+).
 

@@ -19,7 +19,7 @@ Configured in `Config/DefaultEngine.ini` under `[Core.Log]`.
 - Editor: **Window → Developer Tools → Output Log**, filter `LogShadowbane` (or `Server` / `Client` / `Net`)
 - Packaged client / `-game`: `Saved/Logs/ShadowbaneFPS.log`
 - Dedicated server (OCI DEV): `journalctl -u shadowbanefps-server -f` and/or the cooked server's `Saved/Logs/`
-- Telemetry CSV: `Saved/Telemetry/match_<timestamp>_<session>.csv`
+- Telemetry CSV: `Saved/Telemetry/match_*.csv` (flow) and `combat_*.csv` (build-vs-build damage/heals/kills for balance)
 
 ### Useful command-line verbosity
 ```powershell
@@ -54,6 +54,7 @@ Tests live under `Source/ShadowbaneFPS/Tests/` and are registered under the
 | `ShadowbaneFPS.Roster.RoleCoverage` | Healer / siege / detection / control present |
 | `ShadowbaneFPS.Spawn.AvailabilityMatrix` | Staged spawn availability by team/stage |
 | `ShadowbaneFPS.Telemetry.SessionLifecycle` | Telemetry session start/events/end |
+| `ShadowbaneFPS.Telemetry.CombatBalanceAttribution` | Damage/kill attribution by build + power; balance summary |
 | `ShadowbaneFPS.Art.PlaceholderIcons` | Dummy icon codes / team color sanity |
 | `ShadowbaneFPS.Server.CaptureTick` | Capture advance / contest / decay |
 | `ShadowbaneFPS.Server.ObjectiveTick` | Final objective channel math |

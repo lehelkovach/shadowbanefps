@@ -64,7 +64,7 @@ public:
 	bool RequestSelectArchetype(ASBPlayerState* PlayerState, USBCharacterArchetype* Archetype);
 
 	UFUNCTION(BlueprintCallable, Category = "Siege")
-	void NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState* Killer);
+	void NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState* Killer, FName KillingPowerId = NAME_None);
 
 	/** Returns a roster entry by index, or null. */
 	UFUNCTION(BlueprintPure, Category = "Siege")
