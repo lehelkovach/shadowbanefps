@@ -69,18 +69,23 @@ git clone https://github.com/lehelkovach/shadowbanefps.git
 cd shadowbanefps
 git fetch origin
 
-# Prefer `dev`. Fallbacks if it doesn't exist yet:
+# Prefer `dev` (hot-deploy branch).
 git checkout dev 2>$null
 if ($LASTEXITCODE -ne 0) {
   git checkout main
   git pull origin main
-  # If infra/deploy scripts missing on main, use the OCI PR branch once:
-  # git fetch origin cursor/oci-shadowbanefps-server-infra-e09a
-  # git checkout cursor/oci-shadowbanefps-server-infra-e09a
   git checkout -b dev
   git push -u origin dev
 } else {
   git pull origin dev
+}
+
+# If Build.ps1 / shop design / balance tools are missing, merge the latest
+# logs+design PR branch into dev (safe no-op once already merged):
+if (-not (Test-Path .\scripts\Build.ps1)) {
+  git fetch origin cursor/server-client-logs-tests-e6f0
+  git merge --no-edit origin/cursor/server-client-logs-tests-e6f0
+  git push origin dev
 }
 ```
 
@@ -208,11 +213,15 @@ When a slice is stable: open PR **`dev` → `main`** (or tell Lehel to merge).
 | --- | --- |
 | Take over | Follow this file |
 | Sync | `git checkout dev && git pull` |
-| Build editor | `Build.bat ShadowbaneFPSEditor Win64 Development ...` |
+| Build editor | `.\scripts\Build.ps1 -Target Editor -GenerateProjectFiles` |
+| Run PIE | `.\scripts\Run-Editor.ps1` |
 | Tests | `.\scripts\RunAutomationTests.ps1` |
+| Combat balance query | `.\scripts\Analyze-CombatBalance.ps1 -CompareLateSB` |
 | Ship to DEV VM | `.\scripts\Dev-Push.ps1` |
 | Play on DEV | `.\scripts\Connect-DevServer.ps1` |
 | Server logs | `ssh ... journalctl -u shadowbanefps-server -f` |
+| Design truth | `docs/game-design.md` |
+| Balance agent | `BALANCE_AGENT_INSTRUCTIONS.md` |
 
 ---
 
@@ -221,6 +230,8 @@ When a slice is stable: open PR **`dev` → `main`** (or tell Lehel to merge).
 - No SSH deploy key / permission denied to `144.24.46.16`  
 - Linux cross-compile toolchain / `LINUX_MULTIARCH_ROOT` missing  
 - OCI VM down / UDP 7777 closed  
-- Need `main` merge of infra PR (`cursor/oci-shadowbanefps-server-infra-e09a`) before `dev` has scripts  
+- `dev` missing `scripts/Build.ps1` / shop design — merge PR  
+  https://github.com/lehelkovach/shadowbanefps/pull/3 (or the bootstrap merge above)  
+- Need `main` merge of infra if deploy scripts still absent  
 
 Do **not** invent OCI API keys or commit PEMs.
