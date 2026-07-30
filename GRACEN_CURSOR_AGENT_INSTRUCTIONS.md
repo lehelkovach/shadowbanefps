@@ -1,7 +1,7 @@
 # Gracen's Cursor Agent Instructions
 
 **Say to Cursor Agent:**  
-`Follow GRACEN_CURSOR_AGENT_INSTRUCTIONS.md and take over client + server development on the dev branch.`
+`Follow GRACEN_CURSOR_AGENT_INSTRUCTIONS.md — pull/sync the **dev** branch, build, and take over client + server development.`
 
 You are **Gracen's local lead agent** for `shadowbanefps`. You own:
 
@@ -10,6 +10,9 @@ You are **Gracen's local lead agent** for `shadowbanefps`. You own:
 3. **DEV deploy** — hot push to the live OCI VM over **SSH** (not OCI admin)
 
 Cloud Agents write scaffolding/PRs. **You** compile, cook, deploy, and playtest.
+
+> **Branch rule:** day-to-day work is **`dev`** (hot deploy). `main` is the stable baseline.  
+> If someone says “pull main”, still **check out and pull `dev`** after reading this file — that is where Build.ps1, bots, `.sbbot` scripts, and deploy tooling live.
 
 ---
 
@@ -69,7 +72,7 @@ git clone https://github.com/lehelkovach/shadowbanefps.git
 cd shadowbanefps
 git fetch origin
 
-# Prefer `dev` (hot-deploy branch).
+# Always land on `dev` (hot-deploy). Even if you started from main — switch here.
 git checkout dev 2>$null
 if ($LASTEXITCODE -ne 0) {
   git checkout main
@@ -80,11 +83,17 @@ if ($LASTEXITCODE -ne 0) {
   git pull origin dev
 }
 
-# If Build.ps1 / shop design / balance tools are missing, merge the latest
-# logs+design PR branch into dev (safe no-op once already merged):
+# If Build.ps1 / shop design / balance tools are missing, merge the logs+design PR:
 if (-not (Test-Path .\scripts\Build.ps1)) {
   git fetch origin cursor/server-client-logs-tests-e6f0
   git merge --no-edit origin/cursor/server-client-logs-tests-e6f0
+  git push origin dev
+}
+
+# If bots / admin client / .sbbot scripts are missing, merge the bots PR:
+if (-not (Test-Path .\scripts\Run-AdminClient.ps1) -or -not (Test-Path .\Config\BotScripts\Default.sbbot)) {
+  git fetch origin cursor/bots-admin-spectator-e6f0
+  git merge --no-edit origin/cursor/bots-admin-spectator-e6f0
   git push origin dev
 }
 ```
@@ -117,7 +126,7 @@ Fix compile errors until green. Do not leave the tree broken on `dev`.
 ```
 
 Expect: Broken Citadel greybox, team colors, HUD chips, world markers.  
-With admin client: free-cam view of bots pushing capture/objective.  
+With admin client: free-cam view of bots pushing capture/objective (each bot follows `Config/BotScripts/<ArchetypeId>.sbbot`).  
 Controls (human pawn): WASD, mouse, LMB fire, `1-0` switch while dead, `R` respawn.  
 Admin console (today): Unreal `Exec` — `AddBots 8`, `AdminSpectate`.  
 **Planned:** CS-style in-game console — `` ` `` / `~` open/close, type test commands on-screen (`docs/DEV_WORKFLOW.md`).
@@ -128,6 +137,7 @@ Admin console (today): Unreal `Exec` — `AddBots 8`, `AdminSpectate`.
 .\scripts\RunClientTests.ps1              # ShadowbaneFPS.Client.*
 .\scripts\RunServerTests.ps1              # ShadowbaneFPS.Server.*
 .\scripts\RunIntegrationTests.ps1         # ShadowbaneFPS.Integration.*
+# includes ShadowbaneFPS.Bots.TeamSplit + ShadowbaneFPS.Bots.ScriptParse
 ```
 
 Paste failures back if red. Logging categories to filter in Output Log / server journal:
@@ -153,10 +163,11 @@ Balance analyst agent (no UE required):
 Prioritize the pilot loop:
 
 - Match flow / conquest / overtime already scaffolded  
-- **Bots + admin spectate** — `.\scripts\Run-AdminClient.ps1 -Bots 8` (see `docs/BOTS_AND_ADMIN.md`)  
+- **Bots + admin spectate + `.sbbot` scripts** — `.\scripts\Run-AdminClient.ps1 -Bots 8` (see `docs/BOTS_AND_ADMIN.md`, `docs/BOT_SCRIPTING.md`)  
 - Make each roster build *feel* distinct (powers, silhouettes, signatures)  
 - First shop slice: gold + 4 slots + tiny catalog  
 - Siege devices, intel/pings, lobby / respawn UI, map feel  
+- **Planned QoL:** CS-style `` ` `` / `~` client console for test commands (`docs/DEV_WORKFLOW.md`)  
 - Keep changes on **`dev`**; open PRs to `main` when a slice is stable  
 
 Commit in small, clear commits.
@@ -219,11 +230,12 @@ When a slice is stable: open PR **`dev` → `main`** (or tell Lehel to merge).
 
 | Intent | Command |
 | --- | --- |
-| Take over | Follow this file |
-| Sync | `git checkout dev && git pull` |
+| Take over | Follow this file — sync **`dev`** |
+| Sync | `git checkout dev && git pull origin dev` |
 | Build editor | `.\scripts\Build.ps1 -Target Editor -GenerateProjectFiles` |
 | Run PIE | `.\scripts\Run-Editor.ps1` |
 | Bot populate + spectate | `.\scripts\Run-AdminClient.ps1 -Bots 8` |
+| Edit bot AI | `Config/BotScripts/*.sbbot` + `docs/BOT_SCRIPTING.md` |
 | Tests | `.\scripts\RunAutomationTests.ps1` |
 | Combat balance query | `.\scripts\Analyze-CombatBalance.ps1 -CompareLateSB` |
 | Ship to DEV VM | `.\scripts\Dev-Push.ps1` |
@@ -231,6 +243,7 @@ When a slice is stable: open PR **`dev` → `main`** (or tell Lehel to merge).
 | Server logs | `ssh ... journalctl -u shadowbanefps-server -f` |
 | Design truth | `docs/game-design.md` |
 | Balance agent | `BALANCE_AGENT_INSTRUCTIONS.md` |
+| Planned `~` console | `docs/DEV_WORKFLOW.md` |
 
 ---
 
@@ -241,6 +254,8 @@ When a slice is stable: open PR **`dev` → `main`** (or tell Lehel to merge).
 - OCI VM down / UDP 7777 closed  
 - `dev` missing `scripts/Build.ps1` / shop design — merge PR  
   https://github.com/lehelkovach/shadowbanefps/pull/3 (or the bootstrap merge above)  
+- `dev` missing bots / `Config/BotScripts` — merge PR  
+  https://github.com/lehelkovach/shadowbanefps/pull/4 (or the bootstrap merge above)  
 - Need `main` merge of infra if deploy scripts still absent  
 
 Do **not** invent OCI API keys or commit PEMs.
