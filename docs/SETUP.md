@@ -117,24 +117,28 @@ What I can do next (say the word / prioritize):
 
 ## 4. Dedicated server on OCI (Oracle Cloud)
 
-The pilot is small (10 players), so the server is cheap and can even fit Oracle's
-Always-Free tier for early testing.
+**Full runbook:** [`docs/OCI_DEPLOY.md`](./OCI_DEPLOY.md) (create/update/destroy,
+deploy scripts, ports, rollback, client `IP:7777` connect strings).
+
+The pilot is small (10 players), so the server is cheap. Infra lives under
+`infra/oci/` (Terraform) with `scripts/deploy-server.sh` for rsync + systemd.
 
 ### 4.1 Recommended VM shape
 - **Early testing (free):** `VM.Standard.A1.Flex` (Ampere/ARM, Always-Free:
   up to 4 OCPU / 24 GB). Note: an **ARM** server build requires cooking for
   `LinuxArm64`. Simplest cross-compile path is x86, so for least friction use:
-- **Recommended:** `VM.Standard.E4.Flex` or `E5.Flex`, **2 OCPU / 8 GB RAM**,
-  Ubuntu 22.04 LTS (x86_64). A 5v5 UE dedicated server is CPU-light; 2 vCPU is
-  ample for the pilot, scale later.
+- **Recommended (what Terraform defaults to):** `VM.Standard.E4.Flex` or
+  `E5.Flex`, **2 OCPU / 8 GB RAM**, Ubuntu 22.04 LTS (x86_64). A 5v5 UE
+  dedicated server is CPU-light; 2 vCPU is ample for the pilot, scale later.
 - Boot volume: 50 GB is plenty for one packaged server build + logs.
+- Two VMs by default: **`shadowbanefps-dev`** (unstable) and
+  **`shadowbanefps-release`** (stable playtest).
 
-### 4.2 Networking (OCI security list / NSG)
-Open inbound on the VCN + the VM firewall:
+### 4.2 Networking (OCI NSG + UFW)
+Open inbound only:
 - **UDP 7777** — Unreal game traffic (default `GameNetDriver` port).
-- **UDP 7778** (optional) — a second instance / beacon if you run two matches.
-- **TCP 22** — SSH (restrict to your IPs).
-- If you later add a query/stats port or RCON-style admin, open those explicitly.
+- **TCP 22** — SSH (restrict to your IPs via `ssh_allowed_cidrs` / `SSH_ALLOWED_CIDRS`).
+- Optional later: UDP 7778 for a second match on one host — not opened by default.
 
 ### 4.3 Deploy flow (once you build a Linux server package)
 On the MSI laptop (cross-compiling to Linux):
@@ -143,18 +147,19 @@ RunUAT BuildCookRun -project=ShadowbaneFPS.uproject -noP4 ^
   -platform=Linux -serverconfig=Development -server -noclient ^
   -cook -stage -pak -archive -archivedirectory=Dist/Server
 ```
-Copy the archived `LinuxServer/` folder to the VM and run:
+Then from a machine with SSH access to the OCI hosts:
 ```
-./ShadowbaneFPSServer.sh BrokenCitadel -log -port=7777
+./scripts/deploy-server.sh --target dev --src Dist/Server/LinuxServer
+./scripts/deploy-server.sh --target release --src Dist/Server/LinuxServer
 ```
-I'll provide a `systemd` unit + a `deploy.sh` (rsync + restart) so updates are one
-command. Give me SSH access or run the scripts yourself — either works.
+systemd runs `BrokenCitadel -log -port=7777` under `shadowbanefps-server.service`.
+Rollback: `./scripts/deploy-server.sh --target dev --rollback`.
 
 ### 4.4 What I need from you to wire this up
-- OCI region + a created VM (or permission/keys to create/configure one).
-- The VM's public IP and an SSH key I can use (add the private key via Cursor
-  Dashboard → Secrets, or you run my deploy script and paste the output).
-- Confirmation of x86 vs ARM so I target the right Linux cook.
+- OCI API credentials + compartment OCID as **Cursor secrets** / local `.env`
+  (names in `.env.example` — never paste PEMs into chat/git).
+- Your public SSH key + the `/32` CIDRs allowed for TCP 22.
+- Confirmation of **x86** (default) vs ARM so the Linux cook matches the VM.
 
 ---
 

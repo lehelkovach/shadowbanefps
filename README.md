@@ -19,6 +19,8 @@ smoke-test the greybox, and run automation.
 - **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0).
 - **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
   Windows build, Local Cursor Agent onboarding (§5), OCI dedicated-server plan.
+- **[OCI dedicated server](docs/OCI_DEPLOY.md)** — Terraform VCN/NSG/VMs,
+  `deploy-server.sh`, systemd, ports, rollback, client `IP:7777` connect.
 - **[Testing & logging](docs/TESTING.md)** — automation tests, log categories,
   telemetry CSV, headless run script.
 - **[Placeholder art](docs/PLACEHOLDER_ART.md)** — dummy icons/runes/colors now;
@@ -53,6 +55,9 @@ Source/
     Characters/            Pre-built character archetype data asset
     Siege/                 Destructible structures, capture point, objective
     Art/                   Placeholder icons / runes / world markers
-docs/                      Design + setup + testing + placeholder art docs
+docs/                      Design + setup + OCI deploy + testing docs
+infra/oci/                 Terraform + systemd for dedicated-server VMs
+scripts/deploy-server.sh   rsync + systemd restart (dev|release)
+.env.example               Required OCI/SSH env var NAMES (no values)
 GRACEN_CURSOR_AGENT_INSTRUCTIONS.md   Local Cursor Agent prompt
 ```
