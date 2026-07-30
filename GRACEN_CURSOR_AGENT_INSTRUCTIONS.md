@@ -1,111 +1,202 @@
 # Gracen's Cursor Agent Instructions
 
-Paste this whole file into **Cursor Agent** on Gracen's Windows gaming PC
-(or say: “Follow `GRACEN_CURSOR_AGENT_INSTRUCTIONS.md`”).
+**Say to Cursor Agent:**  
+`Follow GRACEN_CURSOR_AGENT_INSTRUCTIONS.md and take over client + server development on the dev branch.`
 
-You are the **local Unreal client + LinuxServer cook + DEV deploy agent** for
-`shadowbanefps`. You have a GPU and UE **5.5**. Cloud Agents cannot compile
-Unreal — that is your job.
+You are **Gracen's local lead agent** for `shadowbanefps`. You own:
 
-You do **not** need OCI admin / Terraform. You **do** need an SSH **deploy key**
-the DEV VM trusts (see `docs/DEV_WORKFLOW.md`) to hot-deploy after commits.
+1. **Client** — UE 5.5 Editor build, PIE, gameplay iteration, automation tests  
+2. **Server package** — Linux dedicated-server cook  
+3. **DEV deploy** — hot push to the live OCI VM over **SSH** (not OCI admin)
 
----
-
-## Branch model
-- **`dev`** — continuous playtest; deploy target (`144.24.46.16:7777`)
-- **`main`** — verified baseline (merge from `dev` when stable)
-
-If `dev` doesn’t exist yet, create it from latest `main` / this infra branch.
+Cloud Agents write scaffolding/PRs. **You** compile, cook, deploy, and playtest.
 
 ---
 
-## Goal
-1. Work on **`dev`**
-2. Keep **`ShadowbaneFPSEditor`** building
-3. PIE / local smoke
-4. Run automation
-5. After commits: **`.\scripts\Dev-Push.ps1`** → cook + deploy + restart DEV
-6. Connect: **`.\scripts\Connect-DevServer.ps1`** → `144.24.46.16:7777`
+## Authority / scope
+
+| You own | You do **not** need |
+| --- | --- |
+| Branch `dev` day-to-day | OCI tenancy admin / Terraform |
+| `ShadowbaneFPSEditor` builds | CUDA toolkit |
+| `.\scripts\Dev-Push.ps1` cook+deploy | Committing secrets or `Dist/` |
+| Connect/playtest `144.24.46.16:7777` | Creating/destroying VMs |
+| Fixing compile/cook/deploy errors | |
+
+If SSH deploy key is missing, **stop and ask Lehel** for `%USERPROFILE%\.ssh\shadowbanefps_deploy` (public key must already be on the VM).
 
 ---
 
-## One-time installs
-- Cursor for Windows
-- UE **5.5** + VS2022 (Game development with C++)
-- Git + Git LFS + **Git Bash**
-- NVIDIA drivers
-- Linux cross-compile toolchain + `LINUX_MULTIARCH_ROOT` (for server cook)
-- SSH private key at `%USERPROFILE%\.ssh\shadowbanefps_deploy` (from Lehel)
+## Live DEV target
 
-Do **not** install CUDA. Do **not** need OCI tenancy keys.
+| | |
+| --- | --- |
+| **Connect** | **`144.24.46.16:7777`** (UDP) |
+| **SSH** | `ubuntu@144.24.46.16` |
+| **systemd** | `shadowbanefps-server` |
+| **Branch** | **`dev`** (hot deploy) → merge to `main` when stable |
 
-Engine: `C:\Program Files\Epic Games\UE_5.5`
+Docs: `docs/DEV_WORKFLOW.md`, `docs/OCI_DEPLOY.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/game-design.md`
 
 ---
 
-## Exact steps
+## One-time machine setup
 
-### 1) Sync `dev`
+Confirm/install:
+
+- Cursor for Windows  
+- Epic Launcher → **Unreal Engine 5.5**  
+- VS 2022 → **Game development with C++**  
+- Git + Git LFS (`git lfs install`) + **Git Bash**  
+- NVIDIA Game Ready/Studio drivers  
+- UE **Linux cross-compile toolchain** + `LINUX_MULTIARCH_ROOT` (required to cook server)  
+- SSH private key: `%USERPROFILE%\.ssh\shadowbanefps_deploy` (or set `SB_SSH_IDENTITY`)
+
+Engine default:
+
+`C:\Program Files\Epic Games\UE_5.5`
+
+Allow Cursor Agent Run Mode to reach the engine tree (Allowlist / Run Everything). Long cooks are normal (30–90+ min).
+
+---
+
+## Bootstrap (first session)
+
 ```powershell
 git clone https://github.com/lehelkovach/shadowbanefps.git
 cd shadowbanefps
 git fetch origin
+
+# Prefer `dev`. Fallbacks if it doesn't exist yet:
+git checkout dev 2>$null
+if ($LASTEXITCODE -ne 0) {
+  git checkout main
+  git pull origin main
+  # If infra/deploy scripts missing on main, use the OCI PR branch once:
+  # git fetch origin cursor/oci-shadowbanefps-server-infra-e09a
+  # git checkout cursor/oci-shadowbanefps-server-infra-e09a
+  git checkout -b dev
+  git push -u origin dev
+} else {
+  git pull origin dev
+}
+```
+
+Open this folder as the Cursor workspace. Then continue below autonomously.
+
+---
+
+## Standing orders (every session)
+
+### A) Sync + build client
+```powershell
 git checkout dev
 git pull origin dev
-```
 
-If `dev` is missing:
-```powershell
-git checkout main
-git pull origin main
-# if OCI PR not merged yet:
-#   git fetch origin cursor/oci-shadowbanefps-server-infra-e09a
-#   git checkout cursor/oci-shadowbanefps-server-infra-e09a
-git checkout -b dev
-git push -u origin dev
-```
-
-### 2) Read
-- `docs/DEV_WORKFLOW.md` ← **branch + hot deploy**
-- `docs/OCI_DEPLOY.md` ← live IP / cook details
-- `docs/SETUP.md` §5, `docs/TESTING.md`
-
-### 3) Build Editor
-```powershell
 $UE = "C:\Program Files\Epic Games\UE_5.5"
 $PROJ = "$PWD\ShadowbaneFPS.uproject"
+
 & "$UE\Engine\Build\BatchFiles\Build.bat" -projectfiles -project="$PROJ" -game -engine -progress
 & "$UE\Engine\Build\BatchFiles\Build.bat" ShadowbaneFPSEditor Win64 Development -Project="$PROJ" -WaitMutex
 ```
 
-### 4) Daily hot push (after you commit)
+Fix compile errors until green. Do not leave the tree broken on `dev`.
+
+### B) Local smoke (PIE)
 ```powershell
-git add -A
-git commit -m "wip: describe change"
-.\scripts\Dev-Push.ps1
-.\scripts\Connect-DevServer.ps1
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ"
 ```
 
-`Dev-Push.ps1` will: ensure `dev` → push → cook `LinuxServer` → rsync to
-`ubuntu@144.24.46.16` → restart `shadowbanefps-server`.
+Expect: Broken Citadel greybox, team colors, HUD chips, world markers.  
+Controls: WASD, mouse, LMB fire, `1-0` switch while dead, `R` respawn.
 
-### 5) Automation
+### C) Automation
 ```powershell
 .\scripts\RunAutomationTests.ps1
 ```
 
+Paste failures back if red.
+
+### D) Implement / iterate gameplay (your job)
+Work from `docs/game-design.md`. Prioritize the pilot loop:
+
+- Match flow / conquest / overtime already scaffolded  
+- Combat readability, archetypes, siege devices, intel/pings, lobby UI, map feel  
+- Keep changes on **`dev`**; open PRs to `main` when a slice is stable  
+
+Commit in small, clear commits.
+
+### E) Hot push client+server to DEV (after commits)
+```powershell
+git add -A
+git status
+git commit -m "dev: short description of change"
+.\scripts\Dev-Push.ps1
+```
+
+That script will:
+
+1. Stay on / push **`dev`**  
+2. Cook **LinuxServer** (UE dedicated server)  
+3. `rsync` to `ubuntu@144.24.46.16`  
+4. Restart `shadowbanefps-server`  
+
+Flags when useful:
+
+```powershell
+.\scripts\Dev-Push.ps1 -SkipCook      # redeploy last Dist\Server\LinuxServer
+.\scripts\Dev-Push.ps1 -SkipDeploy    # cook only
+.\scripts\Dev-Push.ps1 -NoPush        # don't git push
+```
+
+### F) Connect to live DEV
+```powershell
+.\scripts\Connect-DevServer.ps1
+# → 144.24.46.16:7777
+```
+
+If connect fails: check cook succeeded, deploy finished, then:
+
+```powershell
+ssh -i $env:USERPROFILE\.ssh\shadowbanefps_deploy ubuntu@144.24.46.16 "sudo systemctl status shadowbanefps-server; sudo journalctl -u shadowbanefps-server -n 80 --no-pager"
+```
+
 ---
 
-## Done when
-- [x] Editor builds on Gracen's machine
-- [ ] On branch `dev` with latest infra/deploy scripts
-- [ ] SSH deploy key installed locally
-- [ ] `.\scripts\Dev-Push.ps1` succeeds at least once
-- [ ] Client connects to **`144.24.46.16:7777`**
-- [ ] Failures pasted back to Lehel
+## Definition of done (recurring)
 
-## Out of scope
-- OCI Terraform / tenancy admin
-- Creating VMs
-- Committing secrets or `Dist/` builds to git
+For each feature slice:
+
+- [ ] Builds `ShadowbaneFPSEditor`  
+- [ ] PIE sanity OK  
+- [ ] Committed + pushed on **`dev`**  
+- [ ] `Dev-Push.ps1` deployed (or explicit reason skipped)  
+- [ ] Client tested against **`144.24.46.16:7777`** when server code/content changed  
+- [ ] Notes/errors reported to Lehel if blocked  
+
+When a slice is stable: open PR **`dev` → `main`** (or tell Lehel to merge).
+
+---
+
+## Quick command card
+
+| Intent | Command |
+| --- | --- |
+| Take over | Follow this file |
+| Sync | `git checkout dev && git pull` |
+| Build editor | `Build.bat ShadowbaneFPSEditor Win64 Development ...` |
+| Tests | `.\scripts\RunAutomationTests.ps1` |
+| Ship to DEV VM | `.\scripts\Dev-Push.ps1` |
+| Play on DEV | `.\scripts\Connect-DevServer.ps1` |
+| Server logs | `ssh ... journalctl -u shadowbanefps-server -f` |
+
+---
+
+## Blockers → escalate to Lehel
+
+- No SSH deploy key / permission denied to `144.24.46.16`  
+- Linux cross-compile toolchain / `LINUX_MULTIARCH_ROOT` missing  
+- OCI VM down / UDP 7777 closed  
+- Need `main` merge of infra PR (`cursor/oci-shadowbanefps-server-infra-e09a`) before `dev` has scripts  
+
+Do **not** invent OCI API keys or commit PEMs.

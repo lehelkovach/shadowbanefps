@@ -12,8 +12,11 @@ game — and leaves progression, economy, and persistence out of scope.
 
 **Open and follow:** [`GRACEN_CURSOR_AGENT_INSTRUCTIONS.md`](./GRACEN_CURSOR_AGENT_INSTRUCTIONS.md)
 
-That prompt tells Cursor on a Windows UE 5.5 machine to build `ShadowbaneFPSEditor`,
-smoke-test the greybox, cook LinuxServer, and connect to DEV.
+Prompt for Cursor:
+
+> Follow `GRACEN_CURSOR_AGENT_INSTRUCTIONS.md` and take over client + server development on the `dev` branch.
+
+That covers Editor builds, PIE, automation, LinuxServer cook, and hot deploy to DEV.
 
 ## Live DEV server
 
