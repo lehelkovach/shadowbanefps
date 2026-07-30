@@ -29,7 +29,7 @@ That covers Editor builds, PIE, automation, LinuxServer cook, and hot deploy to 
 | Helpers | `scripts/Build.ps1`, `Run-Editor.ps1`, `Debug-Local.ps1`, `Dev-Push.ps1`, `Connect-DevServer.ps1` — see [`docs/SCRIPTS.md`](docs/SCRIPTS.md) |
 
 ## Docs
-- **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0).
+- **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0). §3 = Shadowbane race/class/promotion/discipline roster (product identity).
 - **[Scripts (build/run/debug)](docs/SCRIPTS.md)** — `Build.ps1`, `Run-*`, `Debug-*`, tests, deploy.
 - **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
   Windows build, Local Cursor Agent onboarding (§5), OCI dedicated-server plan.

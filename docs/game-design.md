@@ -1,6 +1,8 @@
 # PILOT GAME DESIGN — Shadowbane-Inspired Conquest Siege Test
 
 > A 20-minute multiplayer pilot for hidden team compositions, siege progression, and tactical adaptation.
+>
+> **Identity:** *Shadowbane FPS* means Shadowbane race / class / promotion / discipline / rune-power builds expressed as pre-built FPS characters. That fantasy is foundational (§3), not optional flavor.
 
 | Match | Format | Teams | Content |
 | --- | --- | --- | --- |
@@ -56,19 +58,54 @@ The battle progresses across a staged fortress map: outer approach, breach, cour
 
 ## 3. Character and Team Selection
 
-The pilot uses a curated roster of complete characters built from the Shadowbane class system. Players familiar with Shadowbane should recognize the logic of race, class, promotion, discipline, equipment, powers, resistances, and group synergy; the pilot does not need to re-explain that system.
+**This is foundational to the product identity.** The project is named *Shadowbane FPS* because the playable fantasy is Shadowbane's race / class / promotion / discipline / rune-power language, compressed into pre-built FPS characters — not a generic hero shooter with Shadowbane skin. Match structure (§5–§9) is the *test*; Shadowbane builds are the *content*.
 
-Before the match, each team sees its own selections and organizes a deliberate group build. The lobby should make it easy to see the team's damage profile, healing, control, mobility, detection, siege capability, and obvious gaps. The opposing group remains concealed.
+Agents implementing gameplay must treat the following as first-class requirements, not flavor text.
+
+### Shadowbane build language (required vocabulary)
+
+Every pre-built character is authored with this stack (shown to the **owning team** in lobby / respawn UI):
+
+| Layer | Meaning in the pilot |
+| --- | --- |
+| **Race** | Fantasy lineage that players recognize (Human, Elf, Aelfborn, Dwarf, Shade, …). Affects silhouette and expected fantasy; may later bias resists / mobility. |
+| **Class** | Base vocation (Warrior, Ranger, Assassin, Channeler, Healer, Wizard, Thief, Templar, …). |
+| **Promotion** | Advanced path (Warlord, Huntress, Nightstalker, Furia, Prelate, Warlock, …). |
+| **Discipline** | Training / school (Blade Weaving, Way of the Bow, Shadowmantle, Flame, Frost, Siegecraft, …). |
+| **Powers / runes** | Readable signature abilities (melee pressure, stealth, fire siege burn, heal aura, chill CC, detection, repair). Placeholder HUD “runes” stand in until real ability VFX/SFX land. |
+| **Equipment / resists** | Implied by the pre-built; not a loot/crafting loop. Observable in combat, not as a full sheet to enemies. |
+| **Role profile** | Coarse lobby read: Damage / Healing / Control / Mobility / Detection / Siege (0–3 each). |
+
+The pilot does **not** ship a full trainer / rune-slotting UI. It **does** ship characters that *read* as finished Shadowbane builds, with distinct audiovisual signatures so hidden-composition play works (§4).
+
+### Curated pilot roster (authoritative list)
+
+Canonical runtime source: `Source/ShadowbaneFPS/Characters/SBPilotRoster.cpp`. Keep this table and that file in sync.
+
+| Id | Display name | Race | Class | Promotion | Discipline | Signature | Side | Dup |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `Warrior_Blade` | Ironbrand Warrior | Human | Warrior | Warlord | Blade Weaving | heavy melee pressure | Both | 2 |
+| `Ranger_Scout` | Greyfen Ranger | Elf | Ranger | Huntress | Way of the Bow | long-range bow / high mobility | Both | 2 |
+| `Assassin_Shadow` | Nightcoil Assassin | Aelfborn | Assassin | Nightstalker | Shadowmantle | stealth / close burst | Both | 1 |
+| `Channeler_Flame` | Ashwake Channeler | Human | Channeler | Furia | Flame | fire magic / siege burn | Both | 1 |
+| `Healer_Prelate` | Dawnward Prelate | Human | Healer | Prelate | Blessed Mantle | sustained healing aura | Both | 2 |
+| `Wizard_Frost` | Rimebind Wizard | Elf | Wizard | Warlock | Frost | crowd control / chill zones | Both | 1 |
+| `Scout_Thief` | Underlane Scout | Shade | Thief | Saboteur | Silent Step | scouting / detection / sabotage | Both | 2 |
+| `Templar_Bulwark` | Bastion Templar | Dwarf | Templar | Paladin | Bulwark | frontline hold / light heal | Both | 2 |
+| `Siege_Engineer` | Breachwright Engineer | Dwarf | Warrior | Huntmaster | Siegecraft | siege device / structure damage | Attackers | 1 |
+| `Defender_Warden` | Wallwarden | Human | Warrior | Warlord | Fortress | repair / emplacement defense | Defenders | 2 |
+
+Coverage the roster must keep: melee, ranged, stealth, fire siege mage, healer, frost CC, detection/scout, tank/support, attacker siege specialist, defender repair/emplacement.
 
 ### Selection rules for the pilot
 
-- Every option is fully pre-built and immediately playable.
-- The roster is large enough to support several distinct group strategies but small enough to learn during testing.
-- Duplicate limits may be used to prevent degenerate stacking and improve composition readability.
-- A player selects a character, not a loose bundle of individual skills or equipment pieces.
-- Character details may be inspected in the lobby, but the opposing team's selections are never displayed.
+- Every option is fully pre-built and immediately playable (a **character**, not a loose skill bundle).
+- Roster size ~8–12; the table above is the current 10.
+- Duplicate limits preserve composition clarity.
+- Own team: full race/class/promotion/discipline + role profile + signature. Enemy team: never shown as a sheet — only observed in the field (§4).
+- Expanding the roster means adding Shadowbane-legible builds (new race/class/promotion/discipline + signature), not anonymous FPS roles.
 
-**Design intent:** The team composition is a strategic wager. A highly specialized group may dominate the matchup it predicted or struggle if the enemy brought a different answer.
+**Design intent:** The team composition is a strategic wager in Shadowbane terms. A Flame Channeler + Siege Engineer push answers differently than a stealth/scout line; discovery and post-death switches (§9) are how teams adapt without erasing that opening wager.
 
 ## 4. Hidden Composition and Battlefield Intelligence
 

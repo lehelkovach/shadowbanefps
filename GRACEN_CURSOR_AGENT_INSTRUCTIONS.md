@@ -122,10 +122,15 @@ Paste failures back if red. Logging categories to filter in Output Log / server 
 `LogShadowbaneServer`, `LogShadowbaneClient`, `LogShadowbaneNet`, `LogShadowbaneTelemetry`.
 
 ### D) Implement / iterate gameplay (your job)
-Work from `docs/game-design.md`. Prioritize the pilot loop:
+**Source of truth:** `docs/game-design.md`.
+
+**Product identity (non-negotiable):** this is *Shadowbane* FPS. Race / class / promotion / discipline / rune-powers are fundamental — not cosmetic. See design doc **§3** (curated roster table) and keep `SBPilotRoster.cpp` in sync. Do not replace builds with generic hero-shooter roles.
+
+Prioritize the pilot loop:
 
 - Match flow / conquest / overtime already scaffolded  
-- Combat readability, archetypes, siege devices, intel/pings, lobby UI, map feel  
+- Make each roster build *feel* distinct (powers, silhouettes, signatures)  
+- Siege devices, intel/pings, lobby composition UI, map feel  
 - Keep changes on **`dev`**; open PRs to `main` when a slice is stable  
 
 Commit in small, clear commits.
