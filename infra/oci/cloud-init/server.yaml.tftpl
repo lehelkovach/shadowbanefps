@@ -1,0 +1,117 @@
+#cloud-config
+# Headless UE dedicated-server host bootstrap for shadowbanefps.
+# Creates deploy layout + a placeholder systemd unit. The deploy script
+# refreshes the unit/start helper from the repo on each upload.
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - curl
+  - rsync
+  - unzip
+  - jq
+  - htop
+  - net-tools
+  - ufw
+
+users:
+  - default
+  - name: sbfps
+    groups: [sudo]
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    lock_passwd: true
+
+write_files:
+  - path: /etc/shadowbanefps.env
+    owner: root:root
+    permissions: "0644"
+    content: |
+      PROJECT=${project}
+      MAP_NAME=BrokenCitadel
+      SERVER_PORT=7777
+      SERVER_ARGS=-log -port=7777
+      SHADOWBANE_ROOT=/opt/shadowbanefps/current
+
+  - path: /opt/shadowbanefps/README
+    owner: root:root
+    permissions: "0644"
+    content: |
+      Deploy layout (cloud-init + scripts/deploy-server.sh):
+
+        /opt/shadowbanefps/
+          current -> releases/<timestamp>/   active LinuxServer tree
+          releases/<timestamp>/
+          shared/logs/
+
+      Upload with: ./scripts/deploy-server.sh --target dev|release --src Dist/Server/LinuxServer
+      Systemd unit: shadowbanefps-server.service
+
+  - path: /usr/local/bin/shadowbanefps-server-start
+    owner: root:root
+    permissions: "0755"
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      ROOT="$${SHADOWBANE_ROOT:-/opt/shadowbanefps/current}"
+      MAP_NAME="$${MAP_NAME:-BrokenCitadel}"
+      SERVER_ARGS=$${SERVER_ARGS:--log -port=7777}
+      cd "$$ROOT"
+      for rel in \
+        ShadowbaneFPS/Binaries/Linux/ShadowbaneFPSServer \
+        Binaries/Linux/ShadowbaneFPSServer \
+        ShadowbaneFPSServer.sh \
+        ShadowbaneFPS/ShadowbaneFPSServer.sh
+      do
+        if [ -x "$$ROOT/$$rel" ]; then
+          echo "Starting: $$ROOT/$$rel $$MAP_NAME $$SERVER_ARGS"
+          exec "$$ROOT/$$rel" "$$MAP_NAME" $$SERVER_ARGS
+        fi
+      done
+      echo "No server binary under $$ROOT — upload a LinuxServer build" >&2
+      exit 1
+
+  - path: /etc/systemd/system/shadowbanefps-server.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=ShadowbaneFPS Unreal Engine dedicated server (headless)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=sbfps
+      Group=sbfps
+      WorkingDirectory=/opt/shadowbanefps/current
+      EnvironmentFile=-/etc/shadowbanefps.env
+      Environment=MAP_NAME=BrokenCitadel
+      Environment=SERVER_ARGS=-log -port=7777
+      ExecStart=/usr/local/bin/shadowbanefps-server-start
+      Restart=on-failure
+      RestartSec=5
+      TimeoutStopSec=30
+      KillMode=mixed
+      LimitNOFILE=65535
+      StandardOutput=journal
+      StandardError=journal
+      SyslogIdentifier=shadowbanefps-server
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - mkdir -p /opt/shadowbanefps/releases /opt/shadowbanefps/shared/logs /opt/shadowbanefps/current
+  - chown -R sbfps:sbfps /opt/shadowbanefps
+  - chmod 755 /opt/shadowbanefps /usr/local/bin/shadowbanefps-server-start
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 7777/udp
+  - ufw --force enable
+  - systemctl daemon-reload
+  - systemctl enable shadowbanefps-server.service
+  - touch /opt/shadowbanefps/PLACEHOLDER_WAITING_FOR_LINUXSERVER
+  - chown sbfps:sbfps /opt/shadowbanefps/PLACEHOLDER_WAITING_FOR_LINUXSERVER

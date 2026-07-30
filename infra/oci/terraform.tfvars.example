@@ -1,0 +1,27 @@
+# Copy to terraform.tfvars (gitignored) or export TF_VAR_* from .env.
+# NEVER put private keys or API key PEM contents in this repo.
+
+oci_region       = "us-ashburn-1"
+compartment_ocid = "ocid1.compartment.oc1..EXAMPLE"
+
+# Contents of your SSH public key file (e.g. cat ~/.ssh/shadowbanefps_oci.pub)
+ssh_public_key = "ssh-ed25519 AAAA... comment"
+
+# Restrict SSH to your IPs. Do not use 0.0.0.0/0 for TCP 22 in production playtests.
+ssh_allowed_cidrs = [
+  "203.0.113.10/32",
+]
+
+# Game clients (UDP 7777). Open for early playtests; tighten later if needed.
+game_udp_cidrs = ["0.0.0.0/0"]
+
+vm_shape      = "VM.Standard.E4.Flex" # or VM.Standard.E5.Flex — x86_64 only
+vm_ocpus      = 2
+vm_memory_gb  = 8
+boot_volume_gb = 50
+
+create_dev     = true
+create_release = true
+
+# Optional: pin Ubuntu 22.04 x86_64 image OCID for your region.
+# ubuntu_image_ocid = "ocid1.image.oc1..EXAMPLE"

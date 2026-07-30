@@ -1,0 +1,31 @@
+[Unit]
+Description=ShadowbaneFPS Unreal Engine dedicated server (headless)
+Documentation=https://github.com/lehelkovach/shadowbanefps/blob/main/docs/OCI_DEPLOY.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sbfps
+Group=sbfps
+WorkingDirectory=/opt/shadowbanefps/current
+EnvironmentFile=-/etc/shadowbanefps.env
+Environment=MAP_NAME=BrokenCitadel
+Environment=SERVER_ARGS=-log -port=7777
+
+# Prefer the packaged binary; fall back to UAT's .sh launcher.
+# Deploy path must contain a cooked LinuxServer tree (see docs/OCI_DEPLOY.md).
+ExecStart=/usr/local/bin/shadowbanefps-server-start
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+LimitNOFILE=65535
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=shadowbanefps-server
+
+[Install]
+WantedBy=multi-user.target
