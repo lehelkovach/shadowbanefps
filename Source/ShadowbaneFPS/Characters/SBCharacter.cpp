@@ -207,6 +207,14 @@ void ASBCharacter::OnPingPressed()
 	}
 }
 
+void ASBCharacter::BotFire()
+{
+	if (HasAuthority())
+	{
+		PerformFire();
+	}
+}
+
 void ASBCharacter::ServerFire_Implementation()
 {
 	PerformFire();
@@ -231,15 +239,17 @@ void ASBCharacter::PerformFire()
 	}
 	LastFireTime = Now;
 
-	APlayerController* PC = Cast<APlayerController>(GetController());
-	if (!PC)
-	{
-		return;
-	}
-
 	FVector CamLoc;
 	FRotator CamRot;
-	PC->GetPlayerViewPoint(CamLoc, CamRot);
+	if (AController* C = GetController())
+	{
+		C->GetPlayerViewPoint(CamLoc, CamRot);
+	}
+	else
+	{
+		CamLoc = GetActorLocation() + FVector(0.f, 0.f, 60.f);
+		CamRot = GetActorRotation();
+	}
 
 	const FVector End = CamLoc + CamRot.Vector() * AttackRange;
 	FHitResult Hit;

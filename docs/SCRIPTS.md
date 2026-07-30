@@ -14,6 +14,7 @@
 | `Run-Server.ps1` | Local Win64 dedicated server |
 | `Debug-Editor.ps1` | Build + Editor with verbose `LogShadowbane*` |
 | `Debug-Local.ps1` | Build All + local server + one client |
+| `Run-AdminClient.ps1` | Spectator + `?Bots=N` populate (no humans) |
 | `Open-VS.ps1` | Generate `.sln` + open Visual Studio (F5 / Attach) |
 | `RunAutomationTests.ps1` | Headless `ShadowbaneFPS.*` tests |
 | `RunClientTests.ps1` / `RunServerTests.ps1` / `RunIntegrationTests.ps1` | Suite filters |
@@ -45,6 +46,15 @@ git pull origin dev
 # or
 .\scripts\Debug-Local.ps1
 ```
+
+## Bot populate + admin spectate
+
+```powershell
+.\scripts\Run-AdminClient.ps1 -Bots 8
+# Console: AddBots 10 / AdminSpectate
+```
+
+See [`BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md).
 
 ## Breakpoints (Visual Studio)
 

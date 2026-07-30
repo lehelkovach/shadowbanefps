@@ -148,3 +148,32 @@ bool USBRulesLibrary::IsFriendlyFire(ESBTeam ShooterTeam, ESBTeam TargetTeam)
 	}
 	return ShooterTeam == TargetTeam;
 }
+
+void USBRulesLibrary::SplitBotsAcrossTeams(int32 TotalBots, int32 MaxPerTeam, int32& OutAttackers, int32& OutDefenders)
+{
+	OutAttackers = 0;
+	OutDefenders = 0;
+	const int32 Cap = FMath::Max(0, MaxPerTeam);
+	int32 Remaining = FMath::Max(0, TotalBots);
+
+	while (Remaining > 0 && (OutAttackers < Cap || OutDefenders < Cap))
+	{
+		if (OutAttackers <= OutDefenders && OutAttackers < Cap)
+		{
+			++OutAttackers;
+		}
+		else if (OutDefenders < Cap)
+		{
+			++OutDefenders;
+		}
+		else if (OutAttackers < Cap)
+		{
+			++OutAttackers;
+		}
+		else
+		{
+			break;
+		}
+		--Remaining;
+	}
+}

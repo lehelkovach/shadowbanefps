@@ -69,6 +69,7 @@ git pull origin dev
 # ... edit / Cursor agent work ...
 .\scripts\Build.ps1 -Target Editor          # or -Target All
 .\scripts\Run-Editor.ps1                    # PIE smoke
+.\scripts\Run-AdminClient.ps1 -Bots 8       # no humans: spectate bots
 # local dedicated (optional):
 #   .\scripts\Debug-Local.ps1
 git add -A
@@ -78,7 +79,7 @@ git commit -m "wip: ..."
 .\scripts\Connect-DevServer.ps1   # 144.24.46.16:7777
 ```
 
-Build/run/debug script map: [`docs/SCRIPTS.md`](./SCRIPTS.md).
+Build/run/debug script map: [`docs/SCRIPTS.md`](./SCRIPTS.md). Bots/admin: [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md).
 
 Flags:
 

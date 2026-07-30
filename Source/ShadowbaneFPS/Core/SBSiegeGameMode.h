@@ -14,10 +14,11 @@ class ASBSpawnPoint;
 class USBCharacterArchetype;
 class ASBBrokenCitadelBuilder;
 class USBMatchTelemetry;
+class ASBBotController;
 
 /**
  * Server-authoritative match flow for the 20-minute conquest siege pilot.
- * See docs/game-design.md §5, §8, §9.
+ * See docs/game-design.md §5, §8, §9. Bot populate + admin spectate: §12.1 / docs/BOTS_AND_ADMIN.md.
  */
 UCLASS()
 class SHADOWBANEFPS_API ASBSiegeGameMode : public AGameModeBase
@@ -54,6 +55,23 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Rules|Map")
 	bool bAutoBuildBrokenCitadel = true;
 
+	/** URL/option driven: ?Bots=8 fills both sides for admin spectate playtests. */
+	UPROPERTY(EditDefaultsOnly, Category = "Rules|Bots")
+	int32 AutoSpawnBots = 0;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Rules|Bots")
+	int32 MaxBotsPerTeam = 5;
+
+	/** Human joins as free-camera admin spectator (URL ?AdminSpectate=1). */
+	UPROPERTY(EditDefaultsOnly, Category = "Rules|Admin")
+	bool bForceAdminSpectate = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Siege|Bots")
+	int32 SpawnBots(int32 TotalBots);
+
+	UFUNCTION(BlueprintCallable, Category = "Siege|Bots")
+	ASBBotController* SpawnOneBot(ESBTeam Team);
+
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	void NotifyFinalObjectiveCompleted();
 
@@ -73,9 +91,15 @@ public:
 	/** Spawns (or respawns) the player using their selected archetype. */
 	bool SpawnPlayerFromController(APlayerController* PC);
 
+	/** Shared spawn path for humans and bots. */
+	bool SpawnCharacterForController(AController* Controller);
+
 	/** Match telemetry sink (design doc §12). Valid after StartMatch. */
 	UFUNCTION(BlueprintPure, Category = "Siege|Telemetry")
 	USBMatchTelemetry* GetTelemetry() const { return Telemetry; }
+
+	UFUNCTION(BlueprintPure, Category = "Siege|Bots")
+	int32 GetActiveBotCount() const { return ActiveBots.Num(); }
 
 protected:
 	virtual void BeginPlay() override;
@@ -86,10 +110,13 @@ protected:
 	void UpdatePhaseForElapsed();
 	void UpdateInnerKeepStageFromPressure();
 	void EndMatch(ESBMatchResult Result);
+	void ParseLaunchOptions(const FString& Options);
+	void MaybeSpawnConfiguredBots();
 
 	bool CanTeamUseArchetype(ESBTeam Team, const USBCharacterArchetype* Archetype, const ASBPlayerState* Ignoring = nullptr) const;
 	ESBTeam PickTeamForNewPlayer() const;
 	USBCharacterArchetype* FindDefaultArchetypeForTeam(ESBTeam Team) const;
+	USBCharacterArchetype* PickBotArchetype(ESBTeam Team) const;
 	ASBSpawnPoint* FindSpawnPoint(ESBTeam Team, const USBCharacterArchetype* Archetype) const;
 
 	void ScheduleRespawn(APlayerController* PC);
@@ -102,6 +129,9 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<USBMatchTelemetry> Telemetry = nullptr;
+
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<ASBBotController>> ActiveBots;
 
 	FTimerHandle MatchTimerHandle;
 	FTimerHandle PhaseTickHandle;

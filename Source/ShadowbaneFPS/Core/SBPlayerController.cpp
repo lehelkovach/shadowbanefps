@@ -18,6 +18,49 @@ void ASBPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(ASBPlayerController, RespawnTimeRemaining);
 	DOREPLIFETIME(ASBPlayerController, bCanRespawn);
+	DOREPLIFETIME(ASBPlayerController, bAdminSpectator);
+}
+
+void ASBPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
+void ASBPlayerController::EnterAdminSpectate()
+{
+	bAdminSpectator = true;
+	bWantAdminSpectate = true;
+
+	if (APawn* Existing = GetPawn())
+	{
+		UnPossess();
+		Existing->Destroy();
+	}
+
+	ChangeState(NAME_Spectating);
+	ClientGotoState(NAME_Spectating);
+
+	UE_LOG(LogShadowbaneClient, Log, TEXT("Admin spectate enabled — free cam; use AddBots N in console if needed"));
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Admin spectate for %s"),
+		GetPlayerState<APlayerState>() ? *GetPlayerState<APlayerState>()->GetPlayerName() : TEXT("?"));
+}
+
+void ASBPlayerController::AddBots(int32 Count)
+{
+	if (ASBSiegeGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ASBSiegeGameMode>() : nullptr)
+	{
+		const int32 Spawned = GM->SpawnBots(FMath::Clamp(Count, 0, 20));
+		UE_LOG(LogShadowbaneServer, Log, TEXT("AddBots console: requested=%d spawned=%d"), Count, Spawned);
+	}
+	else
+	{
+		UE_LOG(LogShadowbaneServer, Warning, TEXT("AddBots: no auth GameMode (listen/dedicated only)"));
+	}
+}
+
+void ASBPlayerController::AdminSpectate()
+{
+	EnterAdminSpectate();
 }
 
 void ASBPlayerController::SetupInputComponent()

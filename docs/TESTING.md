@@ -56,6 +56,7 @@ Tests live under `Source/ShadowbaneFPS/Tests/` and are registered under the
 | `ShadowbaneFPS.Telemetry.SessionLifecycle` | Telemetry session start/events/end |
 | `ShadowbaneFPS.Telemetry.CombatBalanceAttribution` | Damage/kill attribution by build + power; balance summary |
 | `ShadowbaneFPS.Art.PlaceholderIcons` | Dummy icon codes / team color sanity |
+| `ShadowbaneFPS.Bots.TeamSplit` | Bot fill split toward 5v5 |
 | `ShadowbaneFPS.Server.CaptureTick` | Capture advance / contest / decay |
 | `ShadowbaneFPS.Server.ObjectiveTick` | Final objective channel math |
 | `ShadowbaneFPS.Server.FriendlyFireGate` | Same-team damage blocked |
@@ -86,7 +87,7 @@ Tests live under `Source/ShadowbaneFPS/Tests/` and are registered under the
 .\scripts\RunIntegrationTests.ps1
 ```
 
-Build / run / debug helpers (Editor, local dedicated, VS attach): see [`docs/SCRIPTS.md`](./SCRIPTS.md).
+Build / run / debug helpers (Editor, local dedicated, VS attach, **admin bots**): see [`docs/SCRIPTS.md`](./SCRIPTS.md) and [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md).
 
 Or manually (adjust `UE` path):
 

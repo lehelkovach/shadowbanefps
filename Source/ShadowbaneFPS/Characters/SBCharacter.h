@@ -31,6 +31,9 @@ public:
 	/** Server-only. Applies archetype combat stats and stores the selection. */
 	void ApplyArchetype(USBCharacterArchetype* Archetype);
 
+	/** Server-authority fire used by bots (no client RPC). */
+	void BotFire();
+
 	UFUNCTION(BlueprintPure, Category = "Siege")
 	float GetHealth() const { return Health; }
 

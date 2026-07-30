@@ -12,8 +12,10 @@
 #include "Characters/SBCharacter.h"
 #include "Characters/SBCharacterArchetype.h"
 #include "Characters/SBPilotRoster.h"
+#include "AI/SBBotController.h"
 #include "Maps/SBBrokenCitadelBuilder.h"
 #include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -33,11 +35,28 @@ void ASBSiegeGameMode::InitGame(const FString& MapName, const FString& Options, 
 	Super::InitGame(MapName, Options, ErrorMessage);
 	UE_LOG(LogShadowbaneServer, Log, TEXT("InitGame map=%s options=%s"), *MapName, *Options);
 	UE_LOG(LogShadowbane, Log, TEXT("InitGame map=%s options=%s"), *MapName, *Options);
+	ParseLaunchOptions(Options);
 	EnsureRoster();
 	if (!Telemetry)
 	{
 		Telemetry = USBMatchTelemetry::Create(this);
 	}
+}
+
+void ASBSiegeGameMode::ParseLaunchOptions(const FString& Options)
+{
+	if (UGameplayStatics::HasOption(Options, TEXT("Bots")))
+	{
+		AutoSpawnBots = FCString::Atoi(*UGameplayStatics::ParseOption(Options, TEXT("Bots")));
+	}
+	if (UGameplayStatics::HasOption(Options, TEXT("AdminSpectate"))
+		|| UGameplayStatics::HasOption(Options, TEXT("Spectator")))
+	{
+		bForceAdminSpectate = true;
+	}
+
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Launch options: AutoSpawnBots=%d AdminSpectate=%d"),
+		AutoSpawnBots, bForceAdminSpectate ? 1 : 0);
 }
 
 void ASBSiegeGameMode::BeginPlay()
@@ -48,6 +67,7 @@ void ASBSiegeGameMode::BeginPlay()
 	EnsureRoster();
 	EnsureCitadel();
 	StartMatch();
+	MaybeSpawnConfiguredBots();
 }
 
 void ASBSiegeGameMode::EnsureRoster()
@@ -94,9 +114,21 @@ void ASBSiegeGameMode::HandleStartingNewPlayer_Implementation(APlayerController*
 		SiegeState = GetGameState<ASBSiegeGameState>();
 	}
 
+	ASBPlayerController* SBPC = Cast<ASBPlayerController>(NewPlayer);
 	ASBPlayerState* PS = NewPlayer ? NewPlayer->GetPlayerState<ASBPlayerState>() : nullptr;
 	if (!PS)
 	{
+		return;
+	}
+
+	if (bForceAdminSpectate || (SBPC && SBPC->WantsAdminSpectate()))
+	{
+		if (SBPC)
+		{
+			SBPC->EnterAdminSpectate();
+		}
+		UE_LOG(LogShadowbaneServer, Log, TEXT("Admin spectator joined: %s"), *PS->GetPlayerName());
+		UE_LOG(LogShadowbaneClient, Log, TEXT("Joined as admin spectator — watch bots populate the siege"));
 		return;
 	}
 
@@ -461,12 +493,17 @@ void ASBSiegeGameMode::ScheduleRespawn(APlayerController* PC)
 
 bool ASBSiegeGameMode::SpawnPlayerFromController(APlayerController* PC)
 {
-	if (!HasAuthority() || !PC)
+	return SpawnCharacterForController(PC);
+}
+
+bool ASBSiegeGameMode::SpawnCharacterForController(AController* Controller)
+{
+	if (!HasAuthority() || !Controller)
 	{
 		return false;
 	}
 
-	ASBPlayerState* PS = PC->GetPlayerState<ASBPlayerState>();
+	ASBPlayerState* PS = Controller->GetPlayerState<ASBPlayerState>();
 	if (!PS || PS->GetTeam() == ESBTeam::Unassigned)
 	{
 		return false;
@@ -487,14 +524,14 @@ bool ASBSiegeGameMode::SpawnPlayerFromController(APlayerController* PC)
 	const FVector Location = Spot ? Spot->GetActorLocation() : FVector(-4500.f, 0.f, 120.f);
 	const FRotator Rotation = Spot ? Spot->GetActorRotation() : FRotator::ZeroRotator;
 
-	if (APawn* Existing = PC->GetPawn())
+	if (APawn* Existing = Controller->GetPawn())
 	{
-		PC->UnPossess();
+		Controller->UnPossess();
 		Existing->Destroy();
 	}
 
 	FActorSpawnParameters Params;
-	Params.Owner = PC;
+	Params.Owner = Controller;
 	Params.Instigator = nullptr;
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
@@ -514,10 +551,10 @@ bool ASBSiegeGameMode::SpawnPlayerFromController(APlayerController* PC)
 	}
 
 	Character->ApplyArchetype(Archetype);
-	PC->Possess(Character);
+	Controller->Possess(Character);
 	PS->SetAlive(true);
 
-	if (ASBPlayerController* SBPC = Cast<ASBPlayerController>(PC))
+	if (ASBPlayerController* SBPC = Cast<ASBPlayerController>(Controller))
 	{
 		SBPC->ServerBeginRespawnCountdown(0.f);
 	}
@@ -539,6 +576,123 @@ bool ASBSiegeGameMode::SpawnPlayerFromController(APlayerController* PC)
 	}
 
 	return true;
+}
+
+void ASBSiegeGameMode::MaybeSpawnConfiguredBots()
+{
+	if (AutoSpawnBots > 0)
+	{
+		SpawnBots(AutoSpawnBots);
+	}
+}
+
+int32 ASBSiegeGameMode::SpawnBots(int32 TotalBots)
+{
+	if (!HasAuthority())
+	{
+		return 0;
+	}
+
+	EnsureRoster();
+	EnsureCitadel();
+
+	int32 Atk = 0;
+	int32 Def = 0;
+	USBRulesLibrary::SplitBotsAcrossTeams(TotalBots, MaxBotsPerTeam, Atk, Def);
+
+	int32 Spawned = 0;
+	for (int32 i = 0; i < Atk; ++i)
+	{
+		if (SpawnOneBot(ESBTeam::Attackers))
+		{
+			++Spawned;
+		}
+	}
+	for (int32 i = 0; i < Def; ++i)
+	{
+		if (SpawnOneBot(ESBTeam::Defenders))
+		{
+			++Spawned;
+		}
+	}
+
+	UE_LOG(LogShadowbaneServer, Log, TEXT("SpawnBots requested=%d spawned=%d (atk=%d def=%d)"),
+		TotalBots, Spawned, Atk, Def);
+	return Spawned;
+}
+
+ASBBotController* ASBSiegeGameMode::SpawnOneBot(ESBTeam Team)
+{
+	if (!HasAuthority() || Team == ESBTeam::Unassigned)
+	{
+		return nullptr;
+	}
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	ASBBotController* Bot = GetWorld()->SpawnActor<ASBBotController>(
+		ASBBotController::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, Params);
+	if (!Bot)
+	{
+		return nullptr;
+	}
+
+	// Ensure a PlayerState exists for team / archetype / telemetry.
+	if (!Bot->PlayerState)
+	{
+		ASBPlayerState* PS = GetWorld()->SpawnActor<ASBPlayerState>(
+			PlayerStateClass ? PlayerStateClass.Get() : ASBPlayerState::StaticClass());
+		if (PS)
+		{
+			Bot->PlayerState = PS;
+			PS->SetOwner(Bot);
+			if (GameState)
+			{
+				GameState->AddPlayerState(PS);
+			}
+		}
+	}
+
+	USBCharacterArchetype* Arch = PickBotArchetype(Team);
+	const int32 Index = ActiveBots.Num() + 1;
+	const FString Name = FString::Printf(TEXT("Bot_%s_%d"),
+		Team == ESBTeam::Attackers ? TEXT("Atk") : TEXT("Def"), Index);
+	Bot->ConfigureBot(Team, Arch, Name);
+
+	if (!SpawnCharacterForController(Bot))
+	{
+		UE_LOG(LogShadowbaneServer, Warning, TEXT("Failed to spawn pawn for %s"), *Name);
+		Bot->Destroy();
+		return nullptr;
+	}
+
+	ActiveBots.Add(Bot);
+	return Bot;
+}
+
+USBCharacterArchetype* ASBSiegeGameMode::PickBotArchetype(ESBTeam Team) const
+{
+	TArray<USBCharacterArchetype*> Candidates;
+	for (USBCharacterArchetype* Arch : Roster)
+	{
+		if (!Arch)
+		{
+			continue;
+		}
+		if ((Team == ESBTeam::Attackers && Arch->bAttackerEligible)
+			|| (Team == ESBTeam::Defenders && Arch->bDefenderEligible))
+		{
+			if (CanTeamUseArchetype(Team, Arch, nullptr))
+			{
+				Candidates.Add(Arch);
+			}
+		}
+	}
+	if (Candidates.Num() == 0)
+	{
+		return FindDefaultArchetypeForTeam(Team);
+	}
+	return Candidates[FMath::RandRange(0, Candidates.Num() - 1)];
 }
 
 bool ASBSiegeGameMode::CanTeamUseArchetype(ESBTeam Team, const USBCharacterArchetype* Archetype, const ASBPlayerState* Ignoring) const

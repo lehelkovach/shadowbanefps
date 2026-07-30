@@ -36,7 +36,7 @@ If SSH deploy key is missing, **stop and ask Lehel** for `%USERPROFILE%\.ssh\sha
 | **systemd** | `shadowbanefps-server` |
 | **Branch** | **`dev`** (hot deploy) → merge to `main` when stable |
 
-Docs: `docs/game-design.md` (source of truth), `docs/SCRIPTS.md`, `docs/TESTING.md`,
+Docs: `docs/game-design.md` (source of truth), `docs/BOTS_AND_ADMIN.md`, `docs/SCRIPTS.md`, `docs/TESTING.md`,
 `docs/BALANCE_ANALYSIS.md`, `docs/DEV_WORKFLOW.md`, `docs/OCI_DEPLOY.md`, `docs/SETUP.md`,
 `docs/reference/SHADOWBANE_LATE_ERA_BALANCE.md`, `BALANCE_AGENT_INSTRUCTIONS.md`
 
@@ -111,11 +111,15 @@ Fix compile errors until green. Do not leave the tree broken on `dev`.
 .\scripts\Run-Editor.ps1
 # or verbose logs:  .\scripts\Debug-Editor.ps1
 # or local dedicated + client:  .\scripts\Debug-Local.ps1
+# or bot populate + admin spectate (no humans needed):
+.\scripts\Run-AdminClient.ps1 -Bots 8
 # VS breakpoints:  .\scripts\Open-VS.ps1 -GenerateProjectFiles
 ```
 
 Expect: Broken Citadel greybox, team colors, HUD chips, world markers.  
-Controls: WASD, mouse, LMB fire, `1-0` switch while dead, `R` respawn.
+With admin client: free-cam view of bots pushing capture/objective.  
+Controls (human pawn): WASD, mouse, LMB fire, `1-0` switch while dead, `R` respawn.  
+Admin console: `AddBots 8`, `AdminSpectate`.
 
 ### C) Automation
 ```powershell
@@ -148,12 +152,15 @@ Balance analyst agent (no UE required):
 Prioritize the pilot loop:
 
 - Match flow / conquest / overtime already scaffolded  
+- **Bots + admin spectate** — `.\scripts\Run-AdminClient.ps1 -Bots 8` (see `docs/BOTS_AND_ADMIN.md`)  
 - Make each roster build *feel* distinct (powers, silhouettes, signatures)  
 - First shop slice: gold + 4 slots + tiny catalog  
 - Siege devices, intel/pings, lobby / respawn UI, map feel  
 - Keep changes on **`dev`**; open PRs to `main` when a slice is stable  
 
 Commit in small, clear commits.
+
+After bot soaks, run balance analysis on `Saved/Telemetry/combat_*.csv`.
 
 ### E) Hot push client+server to DEV (after commits)
 ```powershell
@@ -215,6 +222,7 @@ When a slice is stable: open PR **`dev` → `main`** (or tell Lehel to merge).
 | Sync | `git checkout dev && git pull` |
 | Build editor | `.\scripts\Build.ps1 -Target Editor -GenerateProjectFiles` |
 | Run PIE | `.\scripts\Run-Editor.ps1` |
+| Bot populate + spectate | `.\scripts\Run-AdminClient.ps1 -Bots 8` |
 | Tests | `.\scripts\RunAutomationTests.ps1` |
 | Combat balance query | `.\scripts\Analyze-CombatBalance.ps1 -CompareLateSB` |
 | Ship to DEV VM | `.\scripts\Dev-Push.ps1` |

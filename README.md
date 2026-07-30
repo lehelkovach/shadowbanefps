@@ -31,7 +31,8 @@ That covers Editor builds, PIE, automation, LinuxServer cook, and hot deploy to 
 ## Docs
 - **[Game design](docs/game-design.md)** — pilot design (Draft 1.1). §3 Shadowbane roster; §3.1 LoL/CS match shop; §16 future MMO path.
 - **[Balance analysis](docs/BALANCE_ANALYSIS.md)** — query combat CSVs; late Ubisoft SB compare; [`BALANCE_AGENT_INSTRUCTIONS.md`](./BALANCE_AGENT_INSTRUCTIONS.md).
-- **[Scripts (build/run/debug)](docs/SCRIPTS.md)** — `Build.ps1`, `Run-*`, `Debug-*`, tests, deploy.
+- **[Bots + admin spectator](docs/BOTS_AND_ADMIN.md)** — populate matches with AI; watch without real players.
+- **[Scripts (build/run/debug)](docs/SCRIPTS.md)** — `Build.ps1`, `Run-*`, `Debug-*`, `Run-AdminClient.ps1`, tests, deploy.
 - **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
   Windows build, Local Cursor Agent onboarding (§5), OCI dedicated-server plan.
 - **[OCI dedicated server](docs/OCI_DEPLOY.md)** — live IP, Terraform, deploy,
@@ -82,6 +83,7 @@ scripts/Run-Game.ps1       standalone client (-Server optional)
 scripts/Run-Server.ps1     local Win64 dedicated server
 scripts/Debug-Editor.ps1   build + verbose-log Editor
 scripts/Debug-Local.ps1    local server + client debug loop
+scripts/Run-AdminClient.ps1 bot populate + admin spectate
 scripts/Open-VS.ps1        generate .sln + open Visual Studio
 scripts/Dev-Push.ps1       commit-friendly cook + hot deploy to DEV
 scripts/Setup-DevSsh.ps1   verify deploy SSH key → VM

@@ -94,4 +94,11 @@ public:
 	/** Friendly-fire gate used by server combat. */
 	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Server")
 	static bool IsFriendlyFire(ESBTeam ShooterTeam, ESBTeam TargetTeam);
+
+	/**
+	 * Split a bot pool into attackers/defenders for populate tests.
+	 * Prefer filling toward 5v5; leftovers go to the smaller side (Attackers on tie).
+	 */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Bots")
+	static void SplitBotsAcrossTeams(int32 TotalBots, int32 MaxPerTeam, int32& OutAttackers, int32& OutDefenders);
 };

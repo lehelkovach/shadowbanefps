@@ -290,6 +290,20 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 - Small starter catalog (weapon/focus, armor/resist, rune charm, utility)
 - One final conquest objective
 - 20-minute timer and overtime
+- **Basic AI bots + admin spectator client** to populate and watch matches without real players (§12.1)
+
+### 12.1 Bots + admin spectator (populate testing)
+
+Until humans fill queues, the pilot must be playtestable by one developer:
+
+| Mode | Spec |
+| --- | --- |
+| AI bots | Simple archetype bots on both teams; move toward enemies / capture / objective / structures; fire hitscan. Launch with `?Bots=N`. |
+| Admin client | Join as free-cam spectator (`?AdminSpectate=1`); spawn bots via console `AddBots N`; watch siege + HUD; collect `combat_*.csv`. |
+| Script | `.\scripts\Run-AdminClient.ps1 -Bots 8` |
+| Doc | [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md) |
+
+Bots are **test fixtures**, not ship content. Improve behavior after the first soak tests; do not block the conquest loop on perfect AI.
 
 ### Match telemetry
 
