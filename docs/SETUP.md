@@ -329,7 +329,7 @@ Paste something like this into **Cursor Desktop → Agent** on their rig:
 - [ ] Add friend as GitHub collaborator; they clone and open in Cursor Desktop.
 - [ ] Friend's Local Agent builds `ShadowbaneFPSEditor` (section 5).
 - [ ] Open `ShadowbaneFPS.uproject`; confirm it loads with the pilot GameMode.
-- [ ] Run automation: `.\scripts\RunAutomationTests.ps1` (see `docs/TESTING.md`).
+- [ ] Run automation: `.\scripts\RunAutomationTests.ps1` (or `RunClientTests` / `RunServerTests` / `RunIntegrationTests` — see `docs/TESTING.md`).
 - [ ] (Server) install the UE Linux cross-compile toolchain when ready.
 - [x] Create the OCI DEV VM (live: `144.24.46.16:7777`).
 - [ ] Gracen: cook LinuxServer + deploy / connect smoke.

@@ -38,4 +38,60 @@ public:
 	/** Regulation overtime should start when the clock hits zero with in-progress objective. */
 	UFUNCTION(BlueprintPure, Category = "Siege|Rules")
 	static bool ShouldEnterOvertime(float FinalObjectiveProgress01);
+
+	/**
+	 * Server capture-zone tick (mirrors ASBCapturePoint):
+	 * uncontested attackers advance, empty/defender-only decays, contested holds.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Server")
+	static float TickCaptureProgress(
+		float CurrentProgressSeconds,
+		float DeltaSeconds,
+		int32 AttackersInZone,
+		int32 DefendersInZone,
+		float CaptureSeconds,
+		float DecayPerSecond = 0.5f);
+
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Server")
+	static bool IsCaptureComplete(float ProgressSeconds, float CaptureSeconds);
+
+	/**
+	 * Server final-objective tick (mirrors ASBConquestObjective):
+	 * uncontested attackers advance, uncontested empty decays, contested holds.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Server")
+	static float TickObjectiveProgress(
+		float CurrentProgressSeconds,
+		float DeltaSeconds,
+		int32 AttackersInZone,
+		int32 DefendersInZone,
+		float CompleteSeconds,
+		float DecayRatePerSecond);
+
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Server")
+	static bool IsObjectiveComplete(float ProgressSeconds, float CompleteSeconds);
+
+	/** Normalized 0..1 progress helpers used by HUD + GameState. */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules")
+	static float NormalizeProgress(float ProgressSeconds, float TotalSeconds);
+
+	/** Client HUD clock — "MM:SS" from remaining regulation seconds. */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Client")
+	static FString FormatMatchClock(float RemainingSeconds);
+
+	/** Archetype switch is only legal while dead (design doc §9). */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Client")
+	static bool CanSelectArchetypeWhileDead(bool bAlive);
+
+	/** Client may request respawn once the server countdown finishes. */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Client")
+	static bool CanRequestRespawn(bool bCanRespawn, float RespawnTimeRemaining);
+
+	/** Client death overlay should show while dead (no pawn / not alive). */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Client")
+	static bool ShouldShowDeathOverlay(bool bAlive, bool bHasPawn);
+
+	/** Friendly-fire gate used by server combat. */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Server")
+	static bool IsFriendlyFire(ESBTeam ShooterTeam, ESBTeam TargetTeam);
 };

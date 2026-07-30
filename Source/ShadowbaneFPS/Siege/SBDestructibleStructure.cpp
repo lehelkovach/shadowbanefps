@@ -83,6 +83,11 @@ void ASBDestructibleStructure::RefreshState()
 	{
 		const ESBStructureState OldState = State;
 		State = NewState;
+		UE_LOG(LogShadowbaneServer, Log, TEXT("Structure %s state %s -> %s (hp=%.0f%%)"),
+			*GetName(),
+			*UEnum::GetValueAsString(OldState),
+			*UEnum::GetValueAsString(NewState),
+			Pct * 100.f);
 		UE_LOG(LogShadowbane, Log, TEXT("Structure %s state %s -> %s (hp=%.0f%%)"),
 			*GetName(),
 			*UEnum::GetValueAsString(OldState),
@@ -114,6 +119,10 @@ void ASBDestructibleStructure::RefreshState()
 
 void ASBDestructibleStructure::OnRep_State()
 {
+	UE_LOG(LogShadowbaneNet, Log, TEXT("OnRep_StructureState %s -> %s"),
+		*GetName(), *UEnum::GetValueAsString(State));
+	UE_LOG(LogShadowbaneClient, Log, TEXT("Client structure %s -> %s"),
+		*GetName(), *UEnum::GetValueAsString(State));
 	ApplyVisualState();
 	OnStructureStateChanged.Broadcast(State);
 }

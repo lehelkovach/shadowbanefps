@@ -1,7 +1,9 @@
 # Runs ShadowbaneFPS automation tests headlessly via UnrealEditor-Cmd.
 # Usage:
 #   .\scripts\RunAutomationTests.ps1
+#   .\scripts\RunAutomationTests.ps1 -Filter "ShadowbaneFPS.Client"
 #   .\scripts\RunAutomationTests.ps1 -EngineRoot "D:\UE\UE_5.5"
+# Suites: RunClientTests.ps1 / RunServerTests.ps1 / RunIntegrationTests.ps1
 
 param(
     [string]$EngineRoot = "C:\Program Files\Epic Games\UE_5.5",

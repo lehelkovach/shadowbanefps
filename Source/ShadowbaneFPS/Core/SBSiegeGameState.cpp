@@ -3,6 +3,7 @@
 #include "SBSiegeGameState.h"
 #include "Characters/SBCharacterArchetype.h"
 #include "Characters/SBPilotRoster.h"
+#include "SBLog.h"
 #include "Net/UnrealNetwork.h"
 
 ASBSiegeGameState::ASBSiegeGameState()
@@ -74,10 +75,14 @@ void ASBSiegeGameState::ServerSetConquestStage(ESBConquestStage NewStage)
 
 void ASBSiegeGameState::OnRep_Phase()
 {
+	UE_LOG(LogShadowbaneNet, Log, TEXT("OnRep_Phase -> %s"), *UEnum::GetValueAsString(Phase));
+	UE_LOG(LogShadowbaneClient, Log, TEXT("Client match phase -> %s"), *UEnum::GetValueAsString(Phase));
 	OnPhaseChanged.Broadcast(Phase);
 }
 
 void ASBSiegeGameState::OnRep_ConquestStage()
 {
+	UE_LOG(LogShadowbaneNet, Log, TEXT("OnRep_ConquestStage -> %s"), *UEnum::GetValueAsString(ConquestStage));
+	UE_LOG(LogShadowbaneClient, Log, TEXT("Client conquest stage -> %s"), *UEnum::GetValueAsString(ConquestStage));
 	OnConquestStageChanged.Broadcast(ConquestStage);
 }

@@ -26,7 +26,7 @@ That covers Editor builds, PIE, automation, LinuxServer cook, and hot deploy to 
 | **SSH** | `ubuntu@144.24.46.16` |
 | **Branch** | `dev` (hot deploy) → merge to `main` when stable |
 | Docs | [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md), [`docs/OCI_DEPLOY.md`](docs/OCI_DEPLOY.md) |
-| Helpers | `scripts/Dev-Push.ps1`, `Cook-LinuxServer.ps1`, `Connect-DevServer.ps1` |
+| Helpers | `scripts/Dev-Push.ps1`, `Setup-DevSsh.ps1`, `Cook-LinuxServer.ps1`, `Connect-DevServer.ps1` |
 
 ## Docs
 - **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0).
@@ -54,8 +54,8 @@ Implemented (C++ / server-authoritative):
 - Runtime **Broken Citadel** greybox (no `.umap` required yet)
 - Destructible gate/breach, courtyard capture, final keep objective
 - Debug HUD (timer, phase, stage, HP, roster)
-- Logging (`LogShadowbane*`) + match telemetry CSV (`Saved/Telemetry/`)
-- Automation tests under `ShadowbaneFPS.*` (see `docs/TESTING.md`)
+- Logging (`LogShadowbane` / `Server` / `Client` / `Net` / `Telemetry` / `Combat`) + match telemetry CSV
+- Automation: `ShadowbaneFPS.Rules|Server|Client|Integration|...` (see `docs/TESTING.md`)
 - Placeholder art kit: team colors, role rune discs, HUD icon chips, world markers
 
 See [`docs/SETUP.md`](docs/SETUP.md) to build/run on a Windows GPU machine.
@@ -75,9 +75,14 @@ docs/                      Design + setup + OCI deploy + testing docs
 infra/oci/                 Terraform + systemd for dedicated-server VMs
 scripts/deploy-server.sh   rsync + systemd restart (dev|release)
 scripts/Dev-Push.ps1       commit-friendly cook + hot deploy to DEV
+scripts/Setup-DevSsh.ps1   verify deploy SSH key → VM
 scripts/Cook-LinuxServer.ps1   Windows cook helper
 scripts/Connect-DevServer.ps1  client → 144.24.46.16:7777
+scripts/RunAutomationTests.ps1 all ShadowbaneFPS.* headless
+scripts/RunClientTests.ps1     ShadowbaneFPS.Client.*
+scripts/RunServerTests.ps1     ShadowbaneFPS.Server.*
+scripts/RunIntegrationTests.ps1 ShadowbaneFPS.Integration.*
 .github/workflows/deploy-dev.yml  optional SSH deploy Action
 .env.example               Required OCI/SSH env var NAMES (no values)
-GRACEN_CURSOR_AGENT_INSTRUCTIONS.md   Local Cursor Agent prompt
+GRACEN_CURSOR_AGENT_INSTRUCTIONS.md   **Gracen takeover prompt (client+server)**
 ```

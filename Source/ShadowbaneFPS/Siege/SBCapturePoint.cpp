@@ -3,6 +3,7 @@
 #include "SBCapturePoint.h"
 #include "Core/SBSiegeGameMode.h"
 #include "Core/SBPlayerState.h"
+#include "Core/SBRulesLibrary.h"
 #include "Core/SBLog.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Pawn.h"
@@ -49,18 +50,14 @@ void ASBCapturePoint::Tick(float DeltaSeconds)
 
 	// Contested (defenders present) halts progress; uncontested attackers advance
 	// it. Empty or defender-only zones slowly decay progress. See design doc §7.
-	if (Attackers > 0 && Defenders == 0)
-	{
-		CaptureProgress = FMath::Min(CaptureSeconds, CaptureProgress + DeltaSeconds);
-	}
-	else if (Attackers == 0)
-	{
-		CaptureProgress = FMath::Max(0.f, CaptureProgress - DeltaSeconds * 0.5f);
-	}
+	CaptureProgress = USBRulesLibrary::TickCaptureProgress(
+		CaptureProgress, DeltaSeconds, Attackers, Defenders, CaptureSeconds, 0.5f);
 
-	if (CaptureProgress >= CaptureSeconds)
+	if (USBRulesLibrary::IsCaptureComplete(CaptureProgress, CaptureSeconds))
 	{
 		bCaptured = true;
+		UE_LOG(LogShadowbaneServer, Log, TEXT("Capture point secured -> stage %s (atk=%d def=%d)"),
+			*UEnum::GetValueAsString(StageOnCapture), Attackers, Defenders);
 		UE_LOG(LogShadowbane, Log, TEXT("Capture point secured -> stage %s"),
 			*UEnum::GetValueAsString(StageOnCapture));
 		OnRep_Captured();
@@ -93,5 +90,12 @@ void ASBCapturePoint::CountOccupants(int32& OutAttackers, int32& OutDefenders) c
 
 void ASBCapturePoint::OnRep_Captured()
 {
+	if (bCaptured)
+	{
+		UE_LOG(LogShadowbaneClient, Log, TEXT("Client received capture flip -> stage %s"),
+			*UEnum::GetValueAsString(StageOnCapture));
+		UE_LOG(LogShadowbaneNet, Log, TEXT("OnRep_Captured stage=%s"),
+			*UEnum::GetValueAsString(StageOnCapture));
+	}
 	// TODO: play capture VFX/SFX, flip zone banner colours on clients.
 }

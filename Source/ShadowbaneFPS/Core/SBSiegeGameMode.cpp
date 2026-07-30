@@ -31,6 +31,7 @@ ASBSiegeGameMode::ASBSiegeGameMode()
 void ASBSiegeGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
 {
 	Super::InitGame(MapName, Options, ErrorMessage);
+	UE_LOG(LogShadowbaneServer, Log, TEXT("InitGame map=%s options=%s"), *MapName, *Options);
 	UE_LOG(LogShadowbane, Log, TEXT("InitGame map=%s options=%s"), *MapName, *Options);
 	EnsureRoster();
 	if (!Telemetry)
@@ -108,6 +109,10 @@ void ASBSiegeGameMode::HandleStartingNewPlayer_Implementation(APlayerController*
 		PS->SetSelectedArchetype(DefaultArch);
 	}
 
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Player starting: %s -> %s archetype=%s"),
+		*PS->GetPlayerName(),
+		*UEnum::GetValueAsString(Team),
+		*PS->GetSelectedArchetypeId().ToString());
 	UE_LOG(LogShadowbane, Log, TEXT("Player starting: %s -> %s archetype=%s"),
 		*PS->GetPlayerName(),
 		*UEnum::GetValueAsString(Team),
@@ -142,6 +147,8 @@ void ASBSiegeGameMode::StartMatch()
 	LastLoggedPhase = ESBMatchPhase::Recon;
 	Telemetry->RecordPhase(ESBMatchPhase::Recon);
 
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Match started: regulation=%.0fs roster=%d"),
+		RegulationSeconds, Roster.Num());
 	UE_LOG(LogShadowbane, Log, TEXT("Match started: regulation=%.0fs roster=%d"),
 		RegulationSeconds, Roster.Num());
 
@@ -184,6 +191,8 @@ void ASBSiegeGameMode::UpdatePhaseForElapsed()
 		if (Desired != LastLoggedPhase)
 		{
 			LastLoggedPhase = Desired;
+			UE_LOG(LogShadowbaneServer, Log, TEXT("Phase -> %s (elapsed=%.1fs)"),
+				*UEnum::GetValueAsString(Desired), Elapsed);
 			UE_LOG(LogShadowbane, Log, TEXT("Phase -> %s (elapsed=%.1fs)"),
 				*UEnum::GetValueAsString(Desired), Elapsed);
 			if (Telemetry)
@@ -233,6 +242,9 @@ void ASBSiegeGameMode::AdvanceConquestStage(ESBConquestStage NewStage)
 	}
 
 	SiegeState->ServerSetConquestStage(NewStage);
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Conquest stage %s -> %s"),
+		*UEnum::GetValueAsString(Current),
+		*UEnum::GetValueAsString(NewStage));
 	UE_LOG(LogShadowbane, Log, TEXT("Conquest stage %s -> %s"),
 		*UEnum::GetValueAsString(Current),
 		*UEnum::GetValueAsString(NewStage));
@@ -258,6 +270,7 @@ void ASBSiegeGameMode::NotifyFinalObjectiveCompleted()
 		return;
 	}
 
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Final objective completed — Attackers win"));
 	UE_LOG(LogShadowbane, Log, TEXT("Final objective completed — Attackers win"));
 	if (Telemetry)
 	{
@@ -283,6 +296,8 @@ void ASBSiegeGameMode::HandleRegulationExpired()
 	{
 		bInOvertime = true;
 		SiegeState->ServerSetPhase(ESBMatchPhase::Overtime);
+		UE_LOG(LogShadowbaneServer, Log, TEXT("Regulation expired with contested objective (%.0f%%) — OVERTIME"),
+			Progress * 100.f);
 		UE_LOG(LogShadowbane, Log, TEXT("Regulation expired with contested objective (%.0f%%) — OVERTIME"),
 			Progress * 100.f);
 		if (Telemetry)
@@ -293,6 +308,7 @@ void ASBSiegeGameMode::HandleRegulationExpired()
 		return;
 	}
 
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Regulation expired — Defenders win"));
 	UE_LOG(LogShadowbane, Log, TEXT("Regulation expired — Defenders win"));
 	EndMatch(ESBMatchResult::DefendersWin);
 }
@@ -310,6 +326,7 @@ void ASBSiegeGameMode::EndMatch(ESBMatchResult Result)
 	SiegeState->ServerSetResult(Result);
 	SiegeState->ServerSetPhase(ESBMatchPhase::Finished);
 
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Match finished: %s"), *UEnum::GetValueAsString(Result));
 	UE_LOG(LogShadowbane, Log, TEXT("Match finished: %s"), *UEnum::GetValueAsString(Result));
 	if (Telemetry)
 	{
@@ -366,6 +383,10 @@ bool ASBSiegeGameMode::RequestSelectArchetype(ASBPlayerState* PlayerState, USBCh
 	const FName FromId = PlayerState->GetSelectedArchetypeId();
 	PlayerState->SetSelectedArchetype(Archetype);
 
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Archetype switch: %s %s -> %s"),
+		*PlayerState->GetPlayerName(),
+		*FromId.ToString(),
+		*Archetype->ArchetypeId.ToString());
 	UE_LOG(LogShadowbane, Log, TEXT("Archetype switch: %s %s -> %s"),
 		*PlayerState->GetPlayerName(),
 		*FromId.ToString(),
@@ -388,6 +409,10 @@ void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState
 
 	Victim->SetAlive(false);
 
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Player killed: victim=%s killer=%s archetype=%s"),
+		*Victim->GetPlayerName(),
+		Killer ? *Killer->GetPlayerName() : TEXT("none"),
+		*Victim->GetSelectedArchetypeId().ToString());
 	UE_LOG(LogShadowbane, Log, TEXT("Player killed: victim=%s killer=%s archetype=%s"),
 		*Victim->GetPlayerName(),
 		Killer ? *Killer->GetPlayerName() : TEXT("none"),
@@ -493,6 +518,11 @@ bool ASBSiegeGameMode::SpawnPlayerFromController(APlayerController* PC)
 		SBPC->ServerBeginRespawnCountdown(0.f);
 	}
 
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Spawned %s as %s at %s (pad=%s)"),
+		*PS->GetPlayerName(),
+		*Archetype->ArchetypeId.ToString(),
+		*Location.ToCompactString(),
+		Spot ? *Spot->GetName() : TEXT("fallback"));
 	UE_LOG(LogShadowbane, Log, TEXT("Spawned %s as %s at %s (pad=%s)"),
 		*PS->GetPlayerName(),
 		*Archetype->ArchetypeId.ToString(),

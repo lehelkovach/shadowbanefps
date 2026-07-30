@@ -7,6 +7,7 @@
 #include "Core/SBSiegeGameMode.h"
 #include "Core/SBTypes.h"
 #include "Core/SBLog.h"
+#include "Core/SBRulesLibrary.h"
 #include "Siege/SBDestructibleStructure.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -263,8 +264,10 @@ void ASBCharacter::PerformFire()
 	{
 		const ASBPlayerState* MyPS = GetPlayerState<ASBPlayerState>();
 		const ASBPlayerState* TheirPS = Target->GetPlayerState<ASBPlayerState>();
-		if (MyPS && TheirPS && MyPS->GetTeam() != ESBTeam::Unassigned && MyPS->GetTeam() == TheirPS->GetTeam())
+		if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam()))
 		{
+			UE_LOG(LogShadowbaneCombat, Verbose, TEXT("Friendly fire blocked %s -> %s"),
+				*GetName(), *Target->GetName());
 			return;
 		}
 

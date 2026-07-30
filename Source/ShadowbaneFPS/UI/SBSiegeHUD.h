@@ -20,4 +20,7 @@ private:
 	void DrawHealthBar(float X, float Y, float W, float H, float Pct);
 	void DrawRosterChips(float& Y);
 	void DrawAbilityRunes();
+
+	/** One-shot client log so HUD readiness shows up without spam. */
+	bool bLoggedHudReady = false;
 };

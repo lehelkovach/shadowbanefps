@@ -112,10 +112,14 @@ Controls: WASD, mouse, LMB fire, `1-0` switch while dead, `R` respawn.
 
 ### C) Automation
 ```powershell
-.\scripts\RunAutomationTests.ps1
+.\scripts\RunAutomationTests.ps1          # all ShadowbaneFPS.*
+.\scripts\RunClientTests.ps1              # ShadowbaneFPS.Client.*
+.\scripts\RunServerTests.ps1              # ShadowbaneFPS.Server.*
+.\scripts\RunIntegrationTests.ps1         # ShadowbaneFPS.Integration.*
 ```
 
-Paste failures back if red.
+Paste failures back if red. Logging categories to filter in Output Log / server journal:
+`LogShadowbaneServer`, `LogShadowbaneClient`, `LogShadowbaneNet`, `LogShadowbaneTelemetry`.
 
 ### D) Implement / iterate gameplay (your job)
 Work from `docs/game-design.md`. Prioritize the pilot loop:

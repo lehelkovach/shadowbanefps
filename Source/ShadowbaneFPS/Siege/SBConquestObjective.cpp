@@ -59,33 +59,28 @@ void ASBConquestObjective::Tick(float DeltaSeconds)
 
 	bContested = (Attackers > 0 && Defenders > 0);
 
-	if (Attackers > 0 && Defenders == 0)
+	if (Attackers > 0 && Defenders == 0 && !bLoggedFirstAttempt && Progress <= 0.f)
 	{
-		if (!bLoggedFirstAttempt && Progress <= 0.f)
+		bLoggedFirstAttempt = true;
+		UE_LOG(LogShadowbaneServer, Log, TEXT("Final objective first attempt started"));
+		UE_LOG(LogShadowbane, Log, TEXT("Final objective first attempt started"));
+		if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
 		{
-			bLoggedFirstAttempt = true;
-			UE_LOG(LogShadowbane, Log, TEXT("Final objective first attempt started"));
-			if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
+			if (USBMatchTelemetry* Telemetry = GM->GetTelemetry())
 			{
-				if (USBMatchTelemetry* Telemetry = GM->GetTelemetry())
-				{
-					Telemetry->Record(ESBTelemetryEvent::FinalObjectiveAttempt);
-				}
+				Telemetry->Record(ESBTelemetryEvent::FinalObjectiveAttempt);
 			}
 		}
-		Progress = FMath::Min(CompleteSeconds, Progress + DeltaSeconds);
 	}
-	else if (!bContested)
-	{
-		// No attackers holding: decay (0 rate == persist in segments).
-		Progress = FMath::Max(0.f, Progress - DecayRatePerSecond * DeltaSeconds);
-	}
-	// While contested, progress holds.
+
+	Progress = USBRulesLibrary::TickObjectiveProgress(
+		Progress, DeltaSeconds, Attackers, Defenders, CompleteSeconds, DecayRatePerSecond);
 
 	PublishProgress();
 
-	if (Progress >= CompleteSeconds)
+	if (USBRulesLibrary::IsObjectiveComplete(Progress, CompleteSeconds))
 	{
+		UE_LOG(LogShadowbaneServer, Log, TEXT("Final objective channel complete"));
 		if (ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>())
 		{
 			GM->NotifyFinalObjectiveCompleted();
@@ -117,6 +112,7 @@ void ASBConquestObjective::PublishProgress() const
 {
 	if (ASBSiegeGameState* GS = GetWorld()->GetGameState<ASBSiegeGameState>())
 	{
-		GS->ServerSetFinalObjectiveProgress(CompleteSeconds > 0.f ? Progress / CompleteSeconds : 0.f);
+		GS->ServerSetFinalObjectiveProgress(
+			USBRulesLibrary::NormalizeProgress(Progress, CompleteSeconds));
 	}
 }

@@ -4,6 +4,8 @@
 #include "Core/SBSiegeGameState.h"
 #include "Core/SBPlayerState.h"
 #include "Core/SBPlayerController.h"
+#include "Core/SBRulesLibrary.h"
+#include "Core/SBLog.h"
 #include "Characters/SBCharacter.h"
 #include "Characters/SBCharacterArchetype.h"
 #include "Art/SBPlaceholderArt.h"
@@ -21,6 +23,13 @@ void ASBSiegeHUD::DrawHUD()
 		return;
 	}
 
+	if (!bLoggedHudReady)
+	{
+		bLoggedHudReady = true;
+		UE_LOG(LogShadowbaneClient, Log, TEXT("Siege HUD ready (canvas=%dx%d)"),
+			FMath::RoundToInt(Canvas->ClipX), FMath::RoundToInt(Canvas->ClipY));
+	}
+
 	float Y = 24.f;
 
 	const ASBSiegeGameState* GS = GetWorld() ? GetWorld()->GetGameState<ASBSiegeGameState>() : nullptr;
@@ -30,13 +39,10 @@ void ASBSiegeHUD::DrawHUD()
 
 	if (GS)
 	{
-		const int32 Remaining = FMath::CeilToInt(GS->GetRemainingRegulationSeconds());
-		const int32 Minutes = Remaining / 60;
-		const int32 Seconds = Remaining % 60;
+		const FString Clock = USBRulesLibrary::FormatMatchClock(GS->GetRemainingRegulationSeconds());
 
-		DrawLine(Y, FString::Printf(TEXT("TIME %02d:%02d  |  %s  |  %s"),
-			Minutes,
-			Seconds,
+		DrawLine(Y, FString::Printf(TEXT("TIME %s  |  %s  |  %s"),
+			*Clock,
 			*UEnum::GetDisplayValueAsText(GS->GetPhase()).ToString(),
 			*UEnum::GetDisplayValueAsText(GS->GetConquestStage()).ToString()));
 
@@ -80,7 +86,7 @@ void ASBSiegeHUD::DrawHUD()
 		DrawHealthBar(24.f, Y, 220.f, 12.f, Pct);
 		Y += 20.f;
 	}
-	else if (PC)
+	else if (PC && USBRulesLibrary::ShouldShowDeathOverlay(PS ? PS->IsAlive() : false, false))
 	{
 		DrawLine(Y, FString::Printf(TEXT("DEAD  |  Respawn in %.1fs  |  Press R"),
 			PC->GetRespawnTimeRemaining()),

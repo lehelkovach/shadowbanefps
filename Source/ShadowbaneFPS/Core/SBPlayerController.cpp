@@ -4,6 +4,8 @@
 #include "SBSiegeGameMode.h"
 #include "SBPlayerState.h"
 #include "Characters/SBCharacterArchetype.h"
+#include "SBLog.h"
+#include "SBRulesLibrary.h"
 #include "Net/UnrealNetwork.h"
 
 ASBPlayerController::ASBPlayerController()
@@ -64,6 +66,8 @@ void ASBPlayerController::ServerBeginRespawnCountdown(float DelaySeconds)
 
 void ASBPlayerController::ServerSelectArchetypeByIndex_Implementation(int32 RosterIndex)
 {
+	UE_LOG(LogShadowbaneNet, Log, TEXT("ServerSelectArchetypeByIndex index=%d"), RosterIndex);
+
 	ASBSiegeGameMode* GM = GetWorld()->GetAuthGameMode<ASBSiegeGameMode>();
 	ASBPlayerState* PS = GetPlayerState<ASBPlayerState>();
 	if (!GM || !PS)
@@ -71,9 +75,16 @@ void ASBPlayerController::ServerSelectArchetypeByIndex_Implementation(int32 Rost
 		return;
 	}
 
+	if (!USBRulesLibrary::CanSelectArchetypeWhileDead(PS->IsAlive()))
+	{
+		UE_LOG(LogShadowbaneServer, Verbose, TEXT("Archetype RPC rejected (alive): %s"), *PS->GetPlayerName());
+		return;
+	}
+
 	USBCharacterArchetype* Archetype = GM->GetRosterArchetype(RosterIndex);
 	if (!Archetype)
 	{
+		UE_LOG(LogShadowbaneServer, Warning, TEXT("Archetype RPC bad index=%d"), RosterIndex);
 		return;
 	}
 
@@ -82,7 +93,10 @@ void ASBPlayerController::ServerSelectArchetypeByIndex_Implementation(int32 Rost
 
 void ASBPlayerController::ServerRequestRespawn_Implementation()
 {
-	if (!bCanRespawn)
+	UE_LOG(LogShadowbaneNet, Log, TEXT("ServerRequestRespawn can=%d remaining=%.2f"),
+		bCanRespawn ? 1 : 0, RespawnTimeRemaining);
+
+	if (!USBRulesLibrary::CanRequestRespawn(bCanRespawn, RespawnTimeRemaining))
 	{
 		return;
 	}
@@ -93,18 +107,25 @@ void ASBPlayerController::ServerRequestRespawn_Implementation()
 		{
 			bCanRespawn = false;
 			RespawnTimeRemaining = 0.f;
+			UE_LOG(LogShadowbaneServer, Log, TEXT("Respawn granted for %s"),
+				GetPlayerState<ASBPlayerState>() ? *GetPlayerState<ASBPlayerState>()->GetPlayerName() : TEXT("?"));
 		}
 	}
 }
 
-void ASBPlayerController::SelectArchetypeSlot0() { ServerSelectArchetypeByIndex(0); }
-void ASBPlayerController::SelectArchetypeSlot1() { ServerSelectArchetypeByIndex(1); }
-void ASBPlayerController::SelectArchetypeSlot2() { ServerSelectArchetypeByIndex(2); }
-void ASBPlayerController::SelectArchetypeSlot3() { ServerSelectArchetypeByIndex(3); }
-void ASBPlayerController::SelectArchetypeSlot4() { ServerSelectArchetypeByIndex(4); }
-void ASBPlayerController::SelectArchetypeSlot5() { ServerSelectArchetypeByIndex(5); }
-void ASBPlayerController::SelectArchetypeSlot6() { ServerSelectArchetypeByIndex(6); }
-void ASBPlayerController::SelectArchetypeSlot7() { ServerSelectArchetypeByIndex(7); }
-void ASBPlayerController::SelectArchetypeSlot8() { ServerSelectArchetypeByIndex(8); }
-void ASBPlayerController::SelectArchetypeSlot9() { ServerSelectArchetypeByIndex(9); }
-void ASBPlayerController::RequestRespawnPressed() { ServerRequestRespawn(); }
+void ASBPlayerController::SelectArchetypeSlot0() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 0")); ServerSelectArchetypeByIndex(0); }
+void ASBPlayerController::SelectArchetypeSlot1() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 1")); ServerSelectArchetypeByIndex(1); }
+void ASBPlayerController::SelectArchetypeSlot2() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 2")); ServerSelectArchetypeByIndex(2); }
+void ASBPlayerController::SelectArchetypeSlot3() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 3")); ServerSelectArchetypeByIndex(3); }
+void ASBPlayerController::SelectArchetypeSlot4() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 4")); ServerSelectArchetypeByIndex(4); }
+void ASBPlayerController::SelectArchetypeSlot5() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 5")); ServerSelectArchetypeByIndex(5); }
+void ASBPlayerController::SelectArchetypeSlot6() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 6")); ServerSelectArchetypeByIndex(6); }
+void ASBPlayerController::SelectArchetypeSlot7() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 7")); ServerSelectArchetypeByIndex(7); }
+void ASBPlayerController::SelectArchetypeSlot8() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 8")); ServerSelectArchetypeByIndex(8); }
+void ASBPlayerController::SelectArchetypeSlot9() { UE_LOG(LogShadowbaneClient, Verbose, TEXT("Client select slot 9")); ServerSelectArchetypeByIndex(9); }
+void ASBPlayerController::RequestRespawnPressed()
+{
+	UE_LOG(LogShadowbaneClient, Log, TEXT("Client respawn pressed (can=%d remaining=%.2f)"),
+		bCanRespawn ? 1 : 0, RespawnTimeRemaining);
+	ServerRequestRespawn();
+}
