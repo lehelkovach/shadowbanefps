@@ -1,0 +1,107 @@
+# Deploy a cooked LinuxServer package to the DEV OCI host via SSH.
+#
+# This does NOT cook Unreal (runners don't have UE by default).
+# Use for:
+#   - workflow_dispatch after uploading a LinuxServer artifact
+#   - self-hosted Windows+UE runner later (pair with a cook job)
+#
+# Required GitHub Secrets:
+#   DEV_SSH_PRIVATE_KEY  — private key the VM trusts (deploy key, not OCI admin)
+#   DEV_SSH_HOST         — default 144.24.46.16
+#   DEV_SSH_USER         — default ubuntu
+
+name: deploy-dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        description: "Name of a workflow artifact containing LinuxServer/ (optional)"
+        required: false
+        default: "LinuxServer"
+  push:
+    branches: [dev]
+    paths:
+      - "scripts/deploy-server.sh"
+      - "infra/oci/systemd/**"
+      - ".github/workflows/deploy-dev.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Skip empty pushes that have no artifact — still useful for systemd script updates
+    # when a package is already on the VM (restart only / reinstall unit).
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Require SSH secrets
+        env:
+          KEY: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "Missing secret DEV_SSH_PRIVATE_KEY."
+            echo "Add a deploy SSH private key in GitHub → Settings → Secrets."
+            echo "Gracen/local machines can still use scripts/Dev-Push.ps1 with a local key."
+            exit 1
+          fi
+
+      - name: Start ssh-agent and add key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
+
+      - name: Download LinuxServer artifact (optional)
+        id: art
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: ${{ inputs.artifact_name || 'LinuxServer' }}
+          path: Dist/Server
+
+      - name: Resolve package path
+        id: pkg
+        run: |
+          set -euo pipefail
+          HOST="${{ secrets.DEV_SSH_HOST }}"
+          USER="${{ secrets.DEV_SSH_USER }}"
+          HOST="${HOST:-144.24.46.16}"
+          USER="${USER:-ubuntu}"
+          echo "host=$HOST" >> "$GITHUB_OUTPUT"
+          echo "user=$USER" >> "$GITHUB_OUTPUT"
+
+          if [ -d Dist/Server/LinuxServer ]; then
+            echo "src=Dist/Server/LinuxServer" >> "$GITHUB_OUTPUT"
+            echo "mode=full" >> "$GITHUB_OUTPUT"
+          elif [ -d Dist/Server ] && { [ -e Dist/Server/ShadowbaneFPSServer.sh ] || [ -d Dist/Server/ShadowbaneFPS ]; }; then
+            echo "src=Dist/Server" >> "$GITHUB_OUTPUT"
+            echo "mode=full" >> "$GITHUB_OUTPUT"
+          else
+            echo "No LinuxServer artifact present — will reinstall systemd unit + restart only."
+            echo "mode=restart" >> "$GITHUB_OUTPUT"
+            echo "src=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy or restart DEV
+        env:
+          SB_DEV_IP: ${{ steps.pkg.outputs.host }}
+          SB_SSH_USER: ${{ steps.pkg.outputs.user }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$SB_DEV_IP" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          if [ "${{ steps.pkg.outputs.mode }}" = "full" ]; then
+            chmod +x scripts/deploy-server.sh
+            ./scripts/deploy-server.sh --target dev --src "${{ steps.pkg.outputs.src }}"
+          else
+            echo "Restarting existing service + refreshing unit files..."
+            scp infra/oci/systemd/shadowbanefps-server-start.sh "${SB_SSH_USER}@${SB_DEV_IP}:/tmp/shadowbanefps-server-start"
+            scp infra/oci/systemd/shadowbanefps-server.service "${SB_SSH_USER}@${SB_DEV_IP}:/tmp/shadowbanefps-server.service"
+            ssh "${SB_SSH_USER}@${SB_DEV_IP}" 'sudo install -m 0755 /tmp/shadowbanefps-server-start /usr/local/bin/shadowbanefps-server-start && sudo install -m 0644 /tmp/shadowbanefps-server.service /etc/systemd/system/shadowbanefps-server.service && sudo systemctl daemon-reload && sudo systemctl restart shadowbanefps-server.service && sudo systemctl --no-pager --full status shadowbanefps-server.service | head -40'
+          fi
+
+      - name: Connect hint
+        run: |
+          echo "Client connect: ${{ steps.pkg.outputs.host }}:7777"
+          echo "Or: .\\scripts\\Connect-DevServer.ps1"

@@ -33,6 +33,10 @@ Or: `.\scripts\Connect-DevServer.ps1`
 Until the first real cook is deployed, the process may be a placeholder — expect
 connect failures until Gracen uploads `Dist/Server/LinuxServer`.
 
+**Day-to-day hot deploy (recommended):** see [`docs/DEV_WORKFLOW.md`](./DEV_WORKFLOW.md)
+and `.\scripts\Dev-Push.ps1` (commit on `dev` → cook → SSH deploy → restart).
+Gracen needs an SSH deploy key, **not** OCI admin.
+
 ---
 
 ## 1. What you get

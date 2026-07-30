@@ -21,8 +21,9 @@ smoke-test the greybox, cook LinuxServer, and connect to DEV.
 | --- | --- |
 | **Connect** | **`144.24.46.16:7777`** (UDP) |
 | **SSH** | `ubuntu@144.24.46.16` |
-| Docs | [`docs/OCI_DEPLOY.md`](docs/OCI_DEPLOY.md) |
-| Helpers | `scripts/Cook-LinuxServer.ps1`, `scripts/Connect-DevServer.ps1`, `scripts/deploy-server.sh` |
+| **Branch** | `dev` (hot deploy) → merge to `main` when stable |
+| Docs | [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md), [`docs/OCI_DEPLOY.md`](docs/OCI_DEPLOY.md) |
+| Helpers | `scripts/Dev-Push.ps1`, `Cook-LinuxServer.ps1`, `Connect-DevServer.ps1` |
 
 ## Docs
 - **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0).
@@ -30,6 +31,8 @@ smoke-test the greybox, cook LinuxServer, and connect to DEV.
   Windows build, Local Cursor Agent onboarding (§5), OCI dedicated-server plan.
 - **[OCI dedicated server](docs/OCI_DEPLOY.md)** — live IP, Terraform, deploy,
   systemd, cook + client connect.
+- **[DEV workflow](docs/DEV_WORKFLOW.md)** — `dev` branch + `Dev-Push.ps1` hot
+  deploy (SSH, not OCI admin).
 - **[Testing & logging](docs/TESTING.md)** — automation tests, log categories,
   telemetry CSV, headless run script.
 - **[Placeholder art](docs/PLACEHOLDER_ART.md)** — dummy icons/runes/colors now;
@@ -68,8 +71,10 @@ Source/
 docs/                      Design + setup + OCI deploy + testing docs
 infra/oci/                 Terraform + systemd for dedicated-server VMs
 scripts/deploy-server.sh   rsync + systemd restart (dev|release)
+scripts/Dev-Push.ps1       commit-friendly cook + hot deploy to DEV
 scripts/Cook-LinuxServer.ps1   Windows cook helper
 scripts/Connect-DevServer.ps1  client → 144.24.46.16:7777
+.github/workflows/deploy-dev.yml  optional SSH deploy Action
 .env.example               Required OCI/SSH env var NAMES (no values)
 GRACEN_CURSOR_AGENT_INSTRUCTIONS.md   Local Cursor Agent prompt
 ```

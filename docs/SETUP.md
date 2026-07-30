@@ -266,7 +266,8 @@ $PROJ = "$PWD\ShadowbaneFPS.uproject"
 
 Once an OCI dedicated server exists (section 4), clients join with the VM IP:
 ```powershell
-& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" YOUR.OCI.IP:7777 -game -log
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" 144.24.46.16:7777 -game -log
+# or: .\scripts\Connect-DevServer.ps1
 ```
 
 ### 5.5 Prompt the friend's Local Agent with this
