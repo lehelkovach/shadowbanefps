@@ -120,6 +120,12 @@ What I can do next (say the word / prioritize):
 **Full runbook:** [`docs/OCI_DEPLOY.md`](./OCI_DEPLOY.md) (create/update/destroy,
 deploy scripts, ports, rollback, client `IP:7777` connect strings).
 
+### Live DEV
+- **Connect:** `144.24.46.16:7777` (UDP)
+- **SSH:** `ubuntu@144.24.46.16`
+- **Shape:** E4 Flex · 2 OCPU / 8 GB · Ubuntu 22.04 x86_64
+- **systemd:** `shadowbanefps-server` (placeholder until first LinuxServer cook)
+
 The pilot is small (10 players), so the server is cheap. Infra lives under
 `infra/oci/` (Terraform) with `scripts/deploy-server.sh` for rsync + systemd.
 
@@ -324,5 +330,6 @@ Paste something like this into **Cursor Desktop → Agent** on their rig:
 - [ ] Open `ShadowbaneFPS.uproject`; confirm it loads with the pilot GameMode.
 - [ ] Run automation: `.\scripts\RunAutomationTests.ps1` (see `docs/TESTING.md`).
 - [ ] (Server) install the UE Linux cross-compile toolchain when ready.
-- [ ] Create the OCI VM (section 4) and share access.
-- [ ] Tell me: engine version confirmed? OCI shape/region? x86 or ARM?
+- [x] Create the OCI DEV VM (live: `144.24.46.16:7777`).
+- [ ] Gracen: cook LinuxServer + deploy / connect smoke.
+- [ ] Optional RELEASE VM when playtests stabilize.

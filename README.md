@@ -13,22 +13,32 @@ game — and leaves progression, economy, and persistence out of scope.
 **Open and follow:** [`GRACEN_CURSOR_AGENT_INSTRUCTIONS.md`](./GRACEN_CURSOR_AGENT_INSTRUCTIONS.md)
 
 That prompt tells Cursor on a Windows UE 5.5 machine to build `ShadowbaneFPSEditor`,
-smoke-test the greybox, and run automation.
+smoke-test the greybox, cook LinuxServer, and connect to DEV.
+
+## Live DEV server
+
+| | |
+| --- | --- |
+| **Connect** | **`144.24.46.16:7777`** (UDP) |
+| **SSH** | `ubuntu@144.24.46.16` |
+| Docs | [`docs/OCI_DEPLOY.md`](docs/OCI_DEPLOY.md) |
+| Helpers | `scripts/Cook-LinuxServer.ps1`, `scripts/Connect-DevServer.ps1`, `scripts/deploy-server.sh` |
 
 ## Docs
 - **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0).
 - **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
   Windows build, Local Cursor Agent onboarding (§5), OCI dedicated-server plan.
-- **[OCI dedicated server](docs/OCI_DEPLOY.md)** — Terraform VCN/NSG/VMs,
-  `deploy-server.sh`, systemd, ports, rollback, client `IP:7777` connect.
+- **[OCI dedicated server](docs/OCI_DEPLOY.md)** — live IP, Terraform, deploy,
+  systemd, cook + client connect.
 - **[Testing & logging](docs/TESTING.md)** — automation tests, log categories,
   telemetry CSV, headless run script.
 - **[Placeholder art](docs/PLACEHOLDER_ART.md)** — dummy icons/runes/colors now;
   real-art swap list later.
 
 ## Status
-**UE 5.5 Editor build verified on Gracen's machine.** Engine target **5.5**
-(`ShadowbaneFPS.uproject`).
+**UE 5.5 Editor build verified on Gracen's machine.**  
+**DEV dedicated-server VM is live** at `144.24.46.16:7777` (placeholder until
+first LinuxServer cook is deployed). Engine target **5.5**.
 
 Implemented (C++ / server-authoritative):
 - Match flow, 20-min clock, phases, conquest stages, overtime, victory
@@ -58,6 +68,8 @@ Source/
 docs/                      Design + setup + OCI deploy + testing docs
 infra/oci/                 Terraform + systemd for dedicated-server VMs
 scripts/deploy-server.sh   rsync + systemd restart (dev|release)
+scripts/Cook-LinuxServer.ps1   Windows cook helper
+scripts/Connect-DevServer.ps1  client → 144.24.46.16:7777
 .env.example               Required OCI/SSH env var NAMES (no values)
 GRACEN_CURSOR_AGENT_INSTRUCTIONS.md   Local Cursor Agent prompt
 ```

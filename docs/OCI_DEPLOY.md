@@ -10,6 +10,31 @@ and only touch resources tagged `project=shadowbanefps` /
 
 ---
 
+## Live DEV (current)
+
+| | |
+| --- | --- |
+| **Connect** | **`144.24.46.16:7777`** (UDP) |
+| **SSH** | `ubuntu@144.24.46.16` |
+| **Shape** | E4 Flex · 2 OCPU / 8 GB · Ubuntu 22.04 x86_64 |
+| **systemd** | `shadowbanefps-server` (enabled; placeholder until a LinuxServer cook is uploaded) |
+| **Network** | `shadowbanefps-vcn` + NSG (TCP 22 + UDP 7777) |
+
+Client smoke (after Editor build):
+
+```powershell
+$UE = "C:\Program Files\Epic Games\UE_5.5"
+$PROJ = "$PWD\ShadowbaneFPS.uproject"
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" 144.24.46.16:7777 -game -log
+```
+
+Or: `.\scripts\Connect-DevServer.ps1`
+
+Until the first real cook is deployed, the process may be a placeholder — expect
+connect failures until Gracen uploads `Dist/Server/LinuxServer`.
+
+---
+
 ## 1. What you get
 
 | Env | Tag / display name | Role |
@@ -244,6 +269,16 @@ that systemd actually has the server process listening.
 ---
 
 ## 9. Client connect strings
+
+### Live DEV
+
+```powershell
+& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" 144.24.46.16:7777 -game -log
+# or
+.\scripts\Connect-DevServer.ps1
+```
+
+### Generic (terraform output / inventory)
 
 Replace with the public IP from `terraform output` / `inventory.sh`:
 
