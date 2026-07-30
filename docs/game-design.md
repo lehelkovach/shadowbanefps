@@ -3,28 +3,30 @@
 > A 20-minute multiplayer pilot for hidden team compositions, siege progression, and tactical adaptation.
 >
 > **Identity:** *Shadowbane FPS* means Shadowbane race / class / promotion / discipline / rune-power builds expressed as pre-built FPS characters. That fantasy is foundational (§3), not optional flavor.
+>
+> **Pilot economy:** Match-local shop buys (League / CS style) on top of those builds — not a persistent inventory yet. Details will pivot with playtests; long-term path may become MMO / persistent-world economy (§16).
 
 | Match | Format | Teams | Content |
 | --- | --- | --- | --- |
-| 20 minutes | Asymmetrical siege | 5v5 pilot target | Pre-built characters |
+| 20 minutes | Asymmetrical siege | 5v5 pilot target | Pre-built characters + match shop |
 
 ## Design Premise
 
-Teams assemble coordinated groups from a roster of pre-built characters based on the Shadowbane class system, enter a conquest match without seeing the opposing composition, and adapt as the siege reveals what the enemy brought.
+Teams assemble coordinated groups from a roster of pre-built characters based on the Shadowbane class system, buy opening gear from a match shop, enter a conquest match without seeing the opposing composition, and adapt as the siege reveals what the enemy brought.
 
-**Pilot focus:** The test is about the match structure and the information game. It does **not** include leveling, training, loot acquisition, crafting, or persistent character progression.
+**Pilot focus:** The test is about match structure, hidden compositions, and light buy-phase adaptation. It does **not** yet include leveling, crafting, loot drops, or persistent character progression — those are deferred (§16).
 
-*Draft 1.0 — Testing specification and design rationale*
+*Draft 1.1 — Testing specification and design rationale*
 
 ---
 
 ## 1. Executive Summary
 
-This pilot is a self-contained, 20-minute conquest siege match. One team attacks a fortified objective while the other defends it. Both sides organize a group from pre-built Shadowbane-based characters, but neither side sees the enemy composition before deployment.
+This pilot is a self-contained, 20-minute conquest siege match. One team attacks a fortified objective while the other defends it. Both sides organize a group from pre-built Shadowbane-based characters, spend match currency in a simple shop (League-of-Legends / Counter-Strike style), but neither side sees the enemy composition before deployment.
 
-The battle progresses across a staged fortress map: outer approach, breach, courtyard, inner keep, and final objective. Players gather information through scouting and combat, communicate what they discover, and may switch to another available pre-built character after death. The design tests whether hidden compositions and limited mid-match adaptation create a deeper conquest game than a conventional fixed-role siege mode.
+The battle progresses across a staged fortress map: outer approach, breach, courtyard, inner keep, and final objective. Players gather information through scouting and combat, communicate what they discover, and may switch to another available pre-built character (and re-spend leftover / earned gold) after death. The design tests whether hidden compositions, shop choices, and limited mid-match adaptation create a deeper conquest game than a conventional fixed-role siege mode.
 
-**Core loop:** Choose a group build -> deploy blind -> scout and identify -> breach or defend -> adapt after losses -> seize or hold the final objective.
+**Core loop:** Pick Shadowbane build → buy gear in shop → deploy blind → scout and identify → breach or defend → adapt after losses (swap build / rebuy) → seize or hold the final objective.
 
 ### Pilot at a glance
 
@@ -33,10 +35,11 @@ The battle progresses across a staged fortress map: outer approach, breach, cour
 | Match length | 20 minutes, plus conditional overtime |
 | Team size | 5 attackers versus 5 defenders for the first stable test |
 | Character model | Curated roster of complete pre-built characters based on the Shadowbane class system |
-| Team information | Own composition visible; opposing composition hidden until observed |
+| Economy | Match-local gold + shop at staging / on respawn (LoL/CS-like); no persistent stash |
+| Team information | Own composition + own buys visible; opposing composition and buys hidden until observed |
 | Primary objective | Attackers breach the fortress and complete the final conquest objective; defenders hold until time expires |
 | Respawning | Enabled, with staged spawn locations |
-| Adaptation | Players may change to another available pre-built character after death |
+| Adaptation | After death: switch pre-built character and/or change shop loadout |
 | Map | One asymmetrical fortress with three principal attack routes and staged objectives |
 
 ## 2. Design Goals
@@ -48,10 +51,11 @@ The battle progresses across a staged fortress map: outer approach, breach, cour
 - Reward conquest activity—breaching, scouting, holding, repairing, interrupting, and controlling routes—rather than kill count alone.
 - Produce a complete testable match using one map and a limited content set.
 
-### Non-goals
+### Non-goals (pilot)
 
-- Character leveling, trainable skills, or in-match progression.
-- A persistent world, guild economy, city construction, or long-term territory ownership.
+- Character leveling, trainable skill trees, or out-of-match progression.
+- A live persistent world, guild economy, city construction, or long-term territory ownership (**future path — §16**, not this pilot).
+- Full inventory management, trading, crafting, or loot drops on corpses.
 - A complete reproduction of every Shadowbane class and build combination.
 - Fully dynamic terrain destruction or large-army simulation.
 - A hero-shooter roster designed around generic modern roles.
@@ -72,11 +76,31 @@ Every pre-built character is authored with this stack (shown to the **owning tea
 | **Class** | Base vocation (Warrior, Ranger, Assassin, Channeler, Healer, Wizard, Thief, Templar, …). |
 | **Promotion** | Advanced path (Warlord, Huntress, Nightstalker, Furia, Prelate, Warlock, …). |
 | **Discipline** | Training / school (Blade Weaving, Way of the Bow, Shadowmantle, Flame, Frost, Siegecraft, …). |
-| **Powers / runes** | Readable signature abilities (melee pressure, stealth, fire siege burn, heal aura, chill CC, detection, repair). Placeholder HUD “runes” stand in until real ability VFX/SFX land. |
-| **Equipment / resists** | Implied by the pre-built; not a loot/crafting loop. Observable in combat, not as a full sheet to enemies. |
+| **Powers / runes** | Readable signature abilities baked into the pre-built (melee pressure, stealth, fire siege burn, heal aura, chill CC, detection, repair). Shop can augment, not replace, the fantasy. |
+| **Equipment / resists** | Purchased in the **match shop** (§3.1) as simple gear / rune items. Observable in combat; enemy does not see your buy list. |
 | **Role profile** | Coarse lobby read: Damage / Healing / Control / Mobility / Detection / Siege (0–3 each). |
 
-The pilot does **not** ship a full trainer / rune-slotting UI. It **does** ship characters that *read* as finished Shadowbane builds, with distinct audiovisual signatures so hidden-composition play works (§4).
+The pilot does **not** ship a full trainer / freeform rune-slotting UI. It **does** ship characters that *read* as finished Shadowbane builds, plus a small shop catalog so opening buys matter.
+
+### 3.1 Match shop (League / CS-style — pilot)
+
+**Intent:** Fast FPS pacing with a short buy moment, not an MMO bank. Think *LoL starting buy* + *CS buy on spawn*, applied to Shadowbane builds.
+
+| Rule | Pilot default (tune in playtests) |
+| --- | --- |
+| Currency | Match-local **gold** — resets every match; nothing persists |
+| Starting gold | Enough for 1–2 meaningful buys (exact numbers TBD in balancing) |
+| Income | Small trickle / objective / kill assist bonuses so mid-match rebuys are possible but not infinite |
+| When you can buy | **Pre-match staging** and **while dead / at team spawn** before respawn commits (CS-like). No mid-fight shopping. |
+| What you buy | A small catalog: weapons/foci, armor/resists, rune charms, utility (detection trinket, repair kit, siege charge). Items modify the selected pre-built's stats / 1–2 power slots. |
+| Slots | Keep it dumb for v1: ~**4 gear slots** (e.g. Primary, Secondary/Focus, Armor, Rune/Charm). Not a deep inventory grid. |
+| Sell / refund | Allow full refund while still in staging or before leaving spawn after death; no sell mid-fight. |
+| Visibility | Own team may see ally buys if useful later; **enemies never see the shop sheet** — only combat signatures (§4). |
+| On character swap | Gear either (a) refunds to gold for repurchase, or (b) filters to items legal for the new build — pick one in implementation and keep it consistent; prefer **refund on swap** for the first pilot. |
+
+**Out of scope for shop v1:** crafting, rare drops, shared stash, auctions, account-bound cosmetics economy.
+
+**Assimilation into FPS:** Each bought item must map to something readable in a shooter — fire rate / damage type, resist tint, a pingable trinket VFX, a throwable siege charge — not a spreadsheet buff with no silhouette.
 
 ### Curated pilot roster (authoritative list)
 
@@ -100,12 +124,13 @@ Coverage the roster must keep: melee, ranged, stealth, fire siege mage, healer, 
 ### Selection rules for the pilot
 
 - Every option is fully pre-built and immediately playable (a **character**, not a loose skill bundle).
+- Players then **buy gear** into the 4 slots (§3.1) before first spawn.
 - Roster size ~8–12; the table above is the current 10.
 - Duplicate limits preserve composition clarity.
-- Own team: full race/class/promotion/discipline + role profile + signature. Enemy team: never shown as a sheet — only observed in the field (§4).
+- Own team: full race/class/promotion/discipline + role profile + signature + own shop loadout. Enemy team: never shown as a sheet — only observed in the field (§4).
 - Expanding the roster means adding Shadowbane-legible builds (new race/class/promotion/discipline + signature), not anonymous FPS roles.
 
-**Design intent:** The team composition is a strategic wager in Shadowbane terms. A Flame Channeler + Siege Engineer push answers differently than a stealth/scout line; discovery and post-death switches (§9) are how teams adapt without erasing that opening wager.
+**Design intent:** The team composition is a strategic wager in Shadowbane terms. Shop buys are the second wager (resist the Flame Channeler? stack detection vs Assassin?). Discovery and post-death switches (§9) are how teams adapt without erasing that opening wager.
 
 ## 4. Hidden Composition and Battlefield Intelligence
 
@@ -202,20 +227,26 @@ The time windows are pacing targets, not hard locks. A strong attack may breach 
 
 ## 9. Respawning and Tactical Adaptation
 
-Death creates a temporary tactical opening and an opportunity to reconsider the team's composition. On the respawn screen, a player may return with the same character or select another available pre-built character.
+Death creates a temporary tactical opening and an opportunity to reconsider the team's composition **and shop loadout**. On the respawn screen, a player may:
+
+1. Return with the same character, or select another available pre-built character.
+2. Open the **match shop** (while dead / at spawn) to refund/rebuy gear with remaining + earned gold.
+3. Confirm and respawn after the delay.
+
+This is the pilot's BF/CS-like adaptation beat — whole build swap + gear tweak — without a persistent armory yet.
 
 ### Recommended constraints
 
-- Switching is allowed only after death or at a designated deployment point.
+- Switching and shopping are allowed only after death or at a designated deployment / staging point.
 - A short respawn delay applies before re-entry.
 - Duplicate or active-character limits preserve composition clarity.
 - Heavy siege options may spawn only at appropriate attacker deployment points.
 - Defensive emplacement-focused options may require a defender-controlled interior spawn.
-- The enemy does not receive an automatic notification of the new selection.
+- The enemy does not receive an automatic notification of the new selection or buys.
 
 ### Why adaptation is limited
 
-The opening group build must remain consequential. Switching should let a team answer discovered problems, not instantly rebuild the entire group after every encounter. Respawn time, travel distance, roster limits, and objective pressure provide the cost of adaptation.
+The opening group build + opening buys must remain consequential. Switching should let a team answer discovered problems, not instantly rebuild the entire group after every encounter. Respawn time, travel distance, roster limits, gold scarcity, and objective pressure provide the cost of adaptation.
 
 ## 10. Combat and Interaction Requirements
 
@@ -236,10 +267,10 @@ The pilot should preserve the recognizable capabilities and group interactions o
 - Available spawn locations
 - Teammate positions and team pings
 - Recently observed enemy markers
-- Respawn countdown and available character selections
+- Respawn countdown, available character selections, and **match shop / gold / 4 gear slots**
 - Final-objective progress
 
-The interface must **not** reveal unseen enemies, the full opposing roster, enemy respawn selections, hidden loadouts, or exact enemy cooldowns.
+The interface must **not** reveal unseen enemies, the full opposing roster, enemy respawn selections, hidden loadouts / buys, or exact enemy cooldowns.
 
 ## 12. Testing Plan
 
@@ -255,6 +286,8 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 - Hidden enemy composition
 - Basic pings and temporary enemy markers
 - Character switching after death
+- Match shop: starting gold, ~4 gear slots, buy at staging / on death
+- Small starter catalog (weapon/focus, armor/resist, rune charm, utility)
 - One final conquest objective
 - 20-minute timer and overtime
 
@@ -265,6 +298,7 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 | Pacing | Time to first contact, first structural damage, first breach, courtyard capture, and first final-objective attempt |
 | Map use | Route selection, player heat maps, repeated choke locations, and abandoned spaces |
 | Composition | Character pick rates, opening group patterns, duplicate frequency, and win rate by composition archetype |
+| Shop | Opening buy patterns, gold spent by minute, refund/rebuy rate, item pick rates, win rate by item |
 | Adaptation | Switch frequency, time of first switch, switches after confirmed intelligence, and post-switch impact |
 | Siege | Structure damage, repair, device uptime, device destruction, and breach method |
 | Outcome | Attacker/defender win rate, average match duration, overtime frequency, and comeback rate |
@@ -273,7 +307,8 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 
 - Does hiding the enemy composition create strategy or merely confusion?
 - Can players infer enough about the opposing group through normal play?
-- Do teams coordinate coherent opening compositions?
+- Do teams coordinate coherent opening compositions **and** opening buys?
+- Does the shop feel like LoL/CS (fast, consequential) or like busywork?
 - Does the opening group build matter after character switching becomes available?
 - Are switches deliberate responses to information, or constant opportunistic counter-picks?
 - Are all three attack routes used for meaningful reasons?
@@ -283,6 +318,7 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 - Can attackers recover after a failed breach?
 - Does the final assault feel climactic and understandable?
 - Is 20 minutes the correct duration for a complete conquest arc?
+- Does match-local gold teach anything useful before a future persistent economy?
 
 ## 13. Principal Design Risks
 
@@ -291,15 +327,17 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 - **Hidden information feels arbitrary:** Unclear silhouettes and effects make reconnaissance unreliable. Prioritize readable presentation before adding more builds.
 - **The siege becomes one choke-point brawl:** If alternate routes lack value, the map fails. Each route must create a different strategic opportunity and defensive burden.
 - **Attackers or defenders snowball:** Use staged spawns, fallback terrain, vulnerable forward positions, and limited resupply to preserve comeback possibilities.
-- **Scope expands into the full MMO concept:** Keep the pilot limited to one map, one match type, a controlled roster, and the new mechanics being tested.
+- **Scope expands into the full MMO concept too early:** Keep the pilot limited to one map, one match type, a controlled roster, match-local shop, and the new mechanics being tested. Persist world systems only after the 20-minute loop works (§16).
+- **Shop becomes the whole game:** If buys dominate over builds and siege skill, shrink the catalog and buff base archetypes.
 
 ## 14. Pilot Success Criteria
 
 - Most teams form recognizable opening group strategies rather than selecting independently.
+- Opening shop buys feel intentional (not random) and readable in combat.
 - Players can identify important enemy capabilities through observation and communication.
 - At least two attack routes remain viable across repeated matches.
 - The siege typically progresses through more than one map stage.
-- Character switching occurs often enough to demonstrate adaptation but not so often that the opening composition is meaningless.
+- Character switching / rebuying occurs often enough to demonstrate adaptation but not so often that the opening composition is meaningless.
 - Support, scouting, siege, repair, and objective play materially influence victory.
 - Both attackers and defenders can produce credible comebacks.
 - Matches usually conclude near the intended duration and produce a clear final contest.
@@ -307,6 +345,16 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 
 ## 15. Design Summary
 
-The pilot compresses the group-building and conquest appeal of Shadowbane into a single short-form siege match. Its original contribution is the interaction among blind team composition, battlefield intelligence, staged fortress conquest, and constrained character substitution after death.
+The pilot compresses the group-building and conquest appeal of Shadowbane into a single short-form siege match, with a League/CS-style match shop as the first economy layer. Its original contribution is the interaction among blind team composition, shop adaptation, battlefield intelligence, staged fortress conquest, and constrained character substitution after death.
 
-The design succeeds when the opening group build matters, discovery changes decisions, siege objectives move the front line, and adaptation creates reversals without reducing the match to endless counter-swapping. Everything outside that test—progression, economy, guild politics, and persistent territory—should remain out of scope until this 20-minute conquest loop proves itself.
+The design succeeds when the opening group build and buys matter, discovery changes decisions, siege objectives move the front line, and adaptation creates reversals without reducing the match to endless counter-swapping.
+
+## 16. Future path (not this pilot)
+
+Playtests may later pivot this toward a **real MMO or persistent-world multiplayer** game. When that happens, expect:
+
+- Account / character persistence, training, and broader Shadowbane build crafting
+- Persistent inventory, crafting, and economy (shops become vendors / auction / guild banks)
+- Territory, cities, and longer conquest seasons
+
+Until then: **match-local gold + small shop + curated pre-builts**. Do not build persistence systems in the pilot codebase unless the design is explicitly updated again.

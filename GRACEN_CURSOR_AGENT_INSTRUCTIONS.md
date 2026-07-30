@@ -122,15 +122,18 @@ Paste failures back if red. Logging categories to filter in Output Log / server 
 `LogShadowbaneServer`, `LogShadowbaneClient`, `LogShadowbaneNet`, `LogShadowbaneTelemetry`.
 
 ### D) Implement / iterate gameplay (your job)
-**Source of truth:** `docs/game-design.md`.
+**Source of truth:** `docs/game-design.md` (Draft 1.1+).
 
 **Product identity (non-negotiable):** this is *Shadowbane* FPS. Race / class / promotion / discipline / rune-powers are fundamental — not cosmetic. See design doc **§3** (curated roster table) and keep `SBPilotRoster.cpp` in sync. Do not replace builds with generic hero-shooter roles.
+
+**Pilot economy:** match-local shop like LoL/CS (**§3.1**) — starting gold, ~4 gear slots, buy at staging / on death. No persistent inventory / MMO economy yet (**§16**).
 
 Prioritize the pilot loop:
 
 - Match flow / conquest / overtime already scaffolded  
 - Make each roster build *feel* distinct (powers, silhouettes, signatures)  
-- Siege devices, intel/pings, lobby composition UI, map feel  
+- First shop slice: gold + 4 slots + tiny catalog  
+- Siege devices, intel/pings, lobby / respawn UI, map feel  
 - Keep changes on **`dev`**; open PRs to `main` when a slice is stable  
 
 Commit in small, clear commits.
