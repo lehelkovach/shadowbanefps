@@ -1,0 +1,13 @@
+# Greyfen Ranger — longer engage, kite slightly when pressed.
+
+id: Ranger_Scout
+role: scout
+retarget: 1.1
+engage: 4000
+fire: 0.28
+
+when enemy in_range 900 -> retreat
+when enemy in_range 4000 -> pursue fire
+when capture open -> pursue
+when objective unlocked -> pursue
+when else -> hold

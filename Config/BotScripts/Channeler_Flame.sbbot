@@ -1,0 +1,13 @@
+# Ashwake Channeler — burn structures, then enemies.
+
+id: Channeler_Flame
+role: siege_mage
+retarget: 1.2
+engage: 2800
+fire: 0.40
+
+when structure intact -> pursue fire
+when enemy in_range 2800 -> pursue fire
+when capture open -> pursue
+when objective unlocked -> pursue
+when else -> hold

@@ -1,0 +1,13 @@
+# Dawnward Prelate — peel to hurt allies first.
+
+id: Healer_Prelate
+role: healer
+retarget: 1.0
+engage: 1800
+fire: 0.50
+
+when ally_hurt in_range 3500 -> pursue
+when enemy in_range 1800 -> pursue fire
+when capture open -> pursue
+when objective unlocked -> pursue
+when else -> hold

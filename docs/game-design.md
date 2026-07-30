@@ -298,12 +298,12 @@ Until humans fill queues, the pilot must be playtestable by one developer:
 
 | Mode | Spec |
 | --- | --- |
-| AI bots | Simple archetype bots on both teams; move toward enemies / capture / objective / structures; fire hitscan. Launch with `?Bots=N`. |
+| AI bots | Archetype bots on both teams; each loads a `.sbbot` rule script (`Config/BotScripts/<ArchetypeId>.sbbot`) for chase / fire / hold / retreat. Launch with `?Bots=N`. |
 | Admin client | Join as free-cam spectator (`?AdminSpectate=1`); spawn bots via console `AddBots N`; watch siege + HUD; collect `combat_*.csv`. |
 | Script | `.\scripts\Run-AdminClient.ps1 -Bots 8` |
-| Doc | [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md) |
+| Doc | [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md), [`docs/BOT_SCRIPTING.md`](./BOT_SCRIPTING.md) |
 
-Bots are **test fixtures**, not ship content. Improve behavior after the first soak tests; do not block the conquest loop on perfect AI.
+Bots are **test fixtures**, not ship content. Tweak `.sbbot` files to change behavior without a rebuild; do not block the conquest loop on perfect AI.
 
 ### Match telemetry
 

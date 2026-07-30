@@ -1,0 +1,13 @@
+# Bastion Templar — hold objective / frontline.
+
+id: Templar_Bulwark
+role: tank
+retarget: 1.3
+engage: 2000
+fire: 0.50
+
+when ally_hurt in_range 2500 -> pursue
+when enemy in_range 2000 -> pursue fire
+when objective unlocked -> pursue
+when capture open -> pursue
+when else -> hold

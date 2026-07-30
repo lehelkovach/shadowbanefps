@@ -1,6 +1,7 @@
 // Copyright shadowbanefps.
 
 #include "SBBotController.h"
+#include "SBBotScript.h"
 #include "Characters/SBCharacter.h"
 #include "Characters/SBCharacterArchetype.h"
 #include "Core/SBPlayerState.h"
@@ -21,6 +22,16 @@ void ASBBotController::ConfigureBot(ESBTeam InTeam, USBCharacterArchetype* InArc
 {
 	BotTeam = InTeam;
 	PreferredArchetype = InArchetype;
+	bScriptLoaded = false;
+
+	if (InArchetype && !InArchetype->ArchetypeId.IsNone())
+	{
+		BotScriptId = InArchetype->ArchetypeId;
+	}
+	else if (BotScriptId.IsNone())
+	{
+		BotScriptId = FName(TEXT("Default"));
+	}
 
 	if (ASBPlayerState* PS = GetPlayerState<ASBPlayerState>())
 	{
@@ -32,18 +43,34 @@ void ASBBotController::ConfigureBot(ESBTeam InTeam, USBCharacterArchetype* InArc
 		}
 	}
 
-	UE_LOG(LogShadowbaneServer, Log, TEXT("Bot configured name=%s team=%s arch=%s"),
+	EnsureScriptLoaded();
+
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Bot configured name=%s team=%s arch=%s script=%s (%d rules)"),
 		*BotName,
 		*UEnum::GetValueAsString(InTeam),
-		InArchetype ? *InArchetype->ArchetypeId.ToString() : TEXT("none"));
+		InArchetype ? *InArchetype->ArchetypeId.ToString() : TEXT("none"),
+		*ActiveScript.ScriptId.ToString(),
+		ActiveScript.Rules.Num());
+}
+
+void ASBBotController::EnsureScriptLoaded()
+{
+	if (bScriptLoaded)
+	{
+		return;
+	}
+	USBBotScriptLibrary::LoadScriptById(BotScriptId, ActiveScript);
+	bScriptLoaded = true;
 }
 
 void ASBBotController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+	EnsureScriptLoaded();
 	RetargetCooldown = 0.f;
 	FireCooldown = 0.f;
 	CurrentTarget = nullptr;
+	CurrentDecision = FSBBotDecision();
 }
 
 void ASBBotController::Tick(float DeltaSeconds)
@@ -61,13 +88,29 @@ void ASBBotController::Tick(float DeltaSeconds)
 		return;
 	}
 
+	EnsureScriptLoaded();
+
 	RetargetCooldown -= DeltaSeconds;
 	FireCooldown -= DeltaSeconds;
 
 	if (RetargetCooldown <= 0.f || !CurrentTarget.IsValid())
 	{
-		PickTarget();
-		RetargetCooldown = RetargetSeconds;
+		Think();
+		RetargetCooldown = FMath::Max(0.2f, ActiveScript.RetargetSeconds);
+	}
+
+	if (CurrentDecision.bHold)
+	{
+		return;
+	}
+
+	if (CurrentDecision.bRetreat)
+	{
+		if (AActor* Threat = CurrentTarget.Get())
+		{
+			SteerAwayFrom(Threat->GetActorLocation(), DeltaSeconds);
+		}
+		return;
 	}
 
 	if (AActor* Target = CurrentTarget.Get())
@@ -75,28 +118,30 @@ void ASBBotController::Tick(float DeltaSeconds)
 		SteerToward(Target->GetActorLocation(), DeltaSeconds);
 
 		const float DistSq = FVector::DistSquared(Character->GetActorLocation(), Target->GetActorLocation());
-		if (DistSq <= FMath::Square(EngageRange) && FireCooldown <= 0.f)
+		const float Engage = ActiveScript.EngageRange > 0.f ? ActiveScript.EngageRange : 2800.f;
+		if (CurrentDecision.bWantFire && DistSq <= FMath::Square(Engage) && FireCooldown <= 0.f)
 		{
 			TryFire();
-			FireCooldown = FireInterval;
+			FireCooldown = FMath::Max(0.15f, ActiveScript.FireInterval);
 		}
 	}
 }
 
-void ASBBotController::PickTarget()
+void ASBBotController::GatherWorldFacts(FSBBotWorldFacts& OutFacts) const
 {
-	CurrentTarget = nullptr;
+	OutFacts = FSBBotWorldFacts();
 	ASBCharacter* Self = GetSBCharacter();
 	if (!Self)
 	{
 		return;
 	}
 
-	const FVector Origin = Self->GetActorLocation();
+	OutFacts.SelfLocation = Self->GetActorLocation();
+	const FVector Origin = OutFacts.SelfLocation;
 
-	// 1) Nearest living enemy pawn
 	float BestEnemyDist = TNumericLimits<float>::Max();
-	ASBCharacter* BestEnemy = nullptr;
+	float BestAllyDist = TNumericLimits<float>::Max();
+
 	for (TActorIterator<ASBCharacter> It(GetWorld()); It; ++It)
 	{
 		ASBCharacter* Other = *It;
@@ -105,69 +150,75 @@ void ASBBotController::PickTarget()
 			continue;
 		}
 		const ASBPlayerState* TheirPS = Other->GetPlayerState<ASBPlayerState>();
-		if (!TheirPS || TheirPS->GetTeam() == BotTeam || TheirPS->GetTeam() == ESBTeam::Unassigned)
+		if (!TheirPS || TheirPS->GetTeam() == ESBTeam::Unassigned)
 		{
 			continue;
 		}
-		const float Dist = FVector::DistSquared(Origin, Other->GetActorLocation());
-		if (Dist < BestEnemyDist)
+
+		const float Dist = FVector::Dist(Origin, Other->GetActorLocation());
+		if (TheirPS->GetTeam() != BotTeam)
 		{
-			BestEnemyDist = Dist;
-			BestEnemy = Other;
+			if (Dist < BestEnemyDist)
+			{
+				BestEnemyDist = Dist;
+				OutFacts.NearestEnemy = Other;
+				OutFacts.EnemyDistance = Dist;
+			}
+		}
+		else
+		{
+			const float MaxHp = FMath::Max(1.f, Other->GetMaxHealth());
+			if (Other->GetHealth() / MaxHp < 0.65f && Dist < BestAllyDist)
+			{
+				BestAllyDist = Dist;
+				OutFacts.HurtAlly = Other;
+				OutFacts.AllyDistance = Dist;
+			}
 		}
 	}
-	if (BestEnemy && BestEnemyDist < FMath::Square(EngageRange * 1.35f))
+
+	for (TActorIterator<ASBCapturePoint> It(GetWorld()); It; ++It)
 	{
-		CurrentTarget = BestEnemy;
+		if (*It && !(*It)->IsCaptured())
+		{
+			OutFacts.OpenCapture = *It;
+			break;
+		}
+	}
+
+	for (TActorIterator<ASBConquestObjective> It(GetWorld()); It; ++It)
+	{
+		if (*It)
+		{
+			OutFacts.Objective = *It;
+			break;
+		}
+	}
+
+	for (TActorIterator<ASBDestructibleStructure> It(GetWorld()); It; ++It)
+	{
+		if (*It && (*It)->GetState() != ESBStructureState::Destroyed)
+		{
+			OutFacts.IntactStructure = *It;
+			break;
+		}
+	}
+}
+
+void ASBBotController::Think()
+{
+	CurrentTarget = nullptr;
+	CurrentDecision = FSBBotDecision();
+
+	FSBBotWorldFacts Facts;
+	GatherWorldFacts(Facts);
+
+	if (!USBBotScriptLibrary::EvaluateRules(ActiveScript, Facts, CurrentDecision))
+	{
 		return;
 	}
 
-	// 2) Attackers: capture / objective / structures. Defenders: hold objective or repair-ish structure.
-	if (BotTeam == ESBTeam::Attackers)
-	{
-		for (TActorIterator<ASBCapturePoint> It(GetWorld()); It; ++It)
-		{
-			if (*It && !(*It)->IsCaptured())
-			{
-				CurrentTarget = *It;
-				return;
-			}
-		}
-		for (TActorIterator<ASBConquestObjective> It(GetWorld()); It; ++It)
-		{
-			CurrentTarget = *It;
-			return;
-		}
-		for (TActorIterator<ASBDestructibleStructure> It(GetWorld()); It; ++It)
-		{
-			if (*It && (*It)->GetState() != ESBStructureState::Destroyed)
-			{
-				CurrentTarget = *It;
-				return;
-			}
-		}
-	}
-	else
-	{
-		for (TActorIterator<ASBConquestObjective> It(GetWorld()); It; ++It)
-		{
-			CurrentTarget = *It;
-			return;
-		}
-		for (TActorIterator<ASBCapturePoint> It(GetWorld()); It; ++It)
-		{
-			if (*It && !(*It)->IsCaptured())
-			{
-				CurrentTarget = *It;
-				return;
-			}
-		}
-	}
-
-	if (BestEnemy)
-	{
-		CurrentTarget = BestEnemy;
-	}
+	CurrentTarget = CurrentDecision.MoveTarget;
 }
 
 void ASBBotController::SteerToward(const FVector& WorldTarget, float DeltaSeconds)
@@ -181,9 +232,35 @@ void ASBBotController::SteerToward(const FVector& WorldTarget, float DeltaSecond
 	const FVector Loc = Character->GetActorLocation();
 	FVector Delta = WorldTarget - Loc;
 	Delta.Z = 0.f;
-	if (Delta.SizeSquared() < 100.f)
+	if (Delta.SizeSquared() < FMath::Square(MoveAcceptanceRadius))
 	{
 		return;
+	}
+
+	const FVector Dir = Delta.GetSafeNormal();
+	Character->AddMovementInput(Dir, 1.f);
+
+	const FRotator Desired = Dir.Rotation();
+	const FRotator NewRot = FMath::RInterpTo(Character->GetActorRotation(), Desired, DeltaSeconds, 8.f);
+	Character->SetActorRotation(FRotator(0.f, NewRot.Yaw, 0.f));
+	SetControlRotation(FRotator(0.f, NewRot.Yaw, 0.f));
+}
+
+void ASBBotController::SteerAwayFrom(const FVector& WorldThreat, float DeltaSeconds)
+{
+	ASBCharacter* Character = GetSBCharacter();
+	if (!Character)
+	{
+		return;
+	}
+
+	const FVector Loc = Character->GetActorLocation();
+	FVector Delta = Loc - WorldThreat;
+	Delta.Z = 0.f;
+	if (Delta.SizeSquared() < 1.f)
+	{
+		Delta = Character->GetActorForwardVector() * -1.f;
+		Delta.Z = 0.f;
 	}
 
 	const FVector Dir = Delta.GetSafeNormal();

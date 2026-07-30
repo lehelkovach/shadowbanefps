@@ -1,0 +1,13 @@
+# Rimebind Wizard — control range poke.
+
+id: Wizard_Frost
+role: control
+retarget: 1.15
+engage: 2600
+fire: 0.45
+
+when enemy in_range 2600 -> pursue fire
+when capture open -> pursue
+when objective unlocked -> pursue
+when structure intact -> pursue fire
+when else -> hold

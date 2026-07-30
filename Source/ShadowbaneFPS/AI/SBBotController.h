@@ -1,13 +1,14 @@
 // Copyright shadowbanefps.
 //
-// Simple pilot bot for populate-and-spectate playtests (no real players yet).
-// See docs/BOTS_AND_ADMIN.md and game-design.md §12.1.
+// Script-driven pilot bot for populate-and-spectate playtests.
+// See docs/BOTS_AND_ADMIN.md and docs/BOT_SCRIPTING.md.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "AIController.h"
 #include "Core/SBTypes.h"
+#include "AI/SBBotScript.h"
 #include "SBBotController.generated.h"
 
 class ASBCharacter;
@@ -15,8 +16,9 @@ class ASBPlayerState;
 class USBCharacterArchetype;
 
 /**
- * Lightweight AI controller: pick a Shadowbane archetype, move toward siege goals,
- * and fire at hostiles. Not a full behavior tree — enough to fill a 5v5 for admin spectate.
+ * AI controller driven by Config/BotScripts/<Id>.sbbot shorthand rules.
+ * Archetype id selects the script (e.g. Warrior_Blade.sbbot); missing files
+ * fall back to Default.sbbot / built-in rules.
  */
 UCLASS()
 class SHADOWBANEFPS_API ASBBotController : public AAIController
@@ -34,6 +36,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Siege|Bots")
 	ESBTeam GetBotTeam() const { return BotTeam; }
 
+	UFUNCTION(BlueprintPure, Category = "Siege|Bots")
+	FName GetBotScriptId() const { return BotScriptId; }
+
 protected:
 	UPROPERTY()
 	ESBTeam BotTeam = ESBTeam::Unassigned;
@@ -41,22 +46,28 @@ protected:
 	UPROPERTY()
 	TObjectPtr<USBCharacterArchetype> PreferredArchetype = nullptr;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Siege|Bots")
-	float RetargetSeconds = 1.25f;
+	/** Script file stem under Config/BotScripts/ (usually archetype id). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Siege|Bots|Script")
+	FName BotScriptId = FName(TEXT("Default"));
 
-	UPROPERTY(EditDefaultsOnly, Category = "Siege|Bots")
-	float FireInterval = 0.55f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Siege|Bots|Script")
+	FSBBotScript ActiveScript;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Siege|Bots")
-	float EngageRange = 2800.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Siege|Bots")
+	float MoveAcceptanceRadius = 120.f;
 
 	float RetargetCooldown = 0.f;
 	float FireCooldown = 0.f;
+	bool bScriptLoaded = false;
 
 	TWeakObjectPtr<AActor> CurrentTarget;
+	FSBBotDecision CurrentDecision;
 
-	void PickTarget();
+	void EnsureScriptLoaded();
+	void GatherWorldFacts(FSBBotWorldFacts& OutFacts) const;
+	void Think();
 	void SteerToward(const FVector& WorldTarget, float DeltaSeconds);
+	void SteerAwayFrom(const FVector& WorldThreat, float DeltaSeconds);
 	void TryFire();
 	ASBCharacter* GetSBCharacter() const;
 };

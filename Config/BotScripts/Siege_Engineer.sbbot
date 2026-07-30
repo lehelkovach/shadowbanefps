@@ -1,0 +1,13 @@
+# Breachwright Engineer — smash structures.
+
+id: Siege_Engineer
+role: siege
+retarget: 1.1
+engage: 2200
+fire: 0.40
+
+when structure intact -> pursue fire
+when capture open -> pursue
+when objective unlocked -> pursue
+when enemy in_range 2200 -> pursue fire
+when else -> hold

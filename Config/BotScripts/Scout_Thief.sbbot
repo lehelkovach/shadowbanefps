@@ -1,0 +1,13 @@
+# Underlane Scout — objectives first, then poke.
+
+id: Scout_Thief
+role: scout
+retarget: 1.0
+engage: 2000
+fire: 0.35
+
+when capture open -> pursue
+when objective unlocked -> pursue
+when enemy in_range 2000 -> pursue fire
+when structure intact -> pursue fire
+when else -> hold

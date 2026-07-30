@@ -1,0 +1,13 @@
+# Wallwarden — defend objective / intact walls.
+
+id: Defender_Warden
+role: defender
+retarget: 1.2
+engage: 2200
+fire: 0.40
+
+when objective unlocked -> pursue
+when structure intact -> pursue
+when enemy in_range 2200 -> pursue fire
+when capture open -> pursue
+when else -> hold

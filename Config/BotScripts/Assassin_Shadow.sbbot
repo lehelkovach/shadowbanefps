@@ -1,0 +1,12 @@
+# Nightcoil Assassin — prioritize close enemies.
+
+id: Assassin_Shadow
+role: assassin
+retarget: 0.9
+engage: 1800
+fire: 0.55
+
+when enemy in_range 1800 -> pursue fire
+when capture open -> pursue
+when objective unlocked -> pursue
+when else -> hold

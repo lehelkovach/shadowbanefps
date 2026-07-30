@@ -54,7 +54,7 @@ git pull origin dev
 # Console: AddBots 10 / AdminSpectate
 ```
 
-See [`BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md).
+See [`BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md) and [`BOT_SCRIPTING.md`](./BOT_SCRIPTING.md).
 
 ## Breakpoints (Visual Studio)
 

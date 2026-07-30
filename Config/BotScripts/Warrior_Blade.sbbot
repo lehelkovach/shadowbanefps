@@ -1,0 +1,13 @@
+# Ironbrand Warrior — close pressure, then siege goals.
+
+id: Warrior_Blade
+role: fighter
+retarget: 1.0
+engage: 2200
+fire: 0.45
+
+when enemy in_range 2200 -> pursue fire
+when capture open -> pursue
+when objective unlocked -> pursue
+when structure intact -> pursue fire
+when else -> hold

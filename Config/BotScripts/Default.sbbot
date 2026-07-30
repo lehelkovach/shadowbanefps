@@ -1,0 +1,14 @@
+# Default siege bot — first matching rule wins.
+# See docs/BOT_SCRIPTING.md
+
+id: Default
+role: general
+retarget: 1.25
+engage: 2800
+fire: 0.55
+
+when enemy in_range 2500 -> pursue fire
+when capture open -> pursue
+when objective unlocked -> pursue
+when structure intact -> pursue fire
+when else -> hold
