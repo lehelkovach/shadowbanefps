@@ -57,6 +57,7 @@ Tests live under `Source/ShadowbaneFPS/Tests/` and are registered under the
 | `ShadowbaneFPS.Telemetry.CombatBalanceAttribution` | Damage/kill attribution by build + power; balance summary |
 | `ShadowbaneFPS.Art.PlaceholderIcons` | Dummy icon codes / team color sanity |
 | `ShadowbaneFPS.Bots.TeamSplit` | Bot fill split toward 5v5 |
+| `ShadowbaneFPS.Bots.ScriptParse` | `.sbbot` shorthand parse + evaluate |
 | `ShadowbaneFPS.Server.CaptureTick` | Capture advance / contest / decay |
 | `ShadowbaneFPS.Server.ObjectiveTick` | Final objective channel math |
 | `ShadowbaneFPS.Server.FriendlyFireGate` | Same-team damage blocked |
