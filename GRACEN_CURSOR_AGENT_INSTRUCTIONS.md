@@ -86,8 +86,8 @@ Controls: WASD move, mouse look, LMB fire, `1-0` switch character while dead, `R
 ---
 
 ## Done when
-- [ ] On branch `cursor/ue5-conquest-siege-pilot-scaffold-e6f0`
-- [ ] `ShadowbaneFPSEditor` Win64 Development build succeeded
+- [x] On branch `cursor/ue5-conquest-siege-pilot-scaffold-e6f0`
+- [x] `ShadowbaneFPSEditor` Win64 Development build succeeded *(Gracen — verified)*
 - [ ] Editor/PIE launches and greybox is visible
 - [ ] Automation `ShadowbaneFPS.*` is green (or failures pasted)
 - [ ] Any errors are copied back to Lehel / the Cloud Agent chat
@@ -96,4 +96,4 @@ Controls: WASD move, mouse look, LMB fire, `1-0` switch character while dead, `R
 - OCI / cloud server admin secrets
 - Linux dedicated server packaging
 - Real art production
-- Merging to `main` (Lehel does that after your green build)
+- Merging to `main` (Lehel does that after your green build — **build is done; merge is next**)
