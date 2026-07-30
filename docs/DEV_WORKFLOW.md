@@ -67,12 +67,18 @@ git push -u origin dev
 git checkout dev
 git pull origin dev
 # ... edit / Cursor agent work ...
+.\scripts\Build.ps1 -Target Editor          # or -Target All
+.\scripts\Run-Editor.ps1                    # PIE smoke
+# local dedicated (optional):
+#   .\scripts\Debug-Local.ps1
 git add -A
 git commit -m "wip: ..."
 .\scripts\Dev-Push.ps1
 # cooks LinuxServer + deploys + restarts systemd
 .\scripts\Connect-DevServer.ps1   # 144.24.46.16:7777
 ```
+
+Build/run/debug script map: [`docs/SCRIPTS.md`](./SCRIPTS.md).
 
 Flags:
 

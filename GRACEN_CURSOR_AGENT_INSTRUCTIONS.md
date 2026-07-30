@@ -93,18 +93,18 @@ Open this folder as the Cursor workspace. Then continue below autonomously.
 git checkout dev
 git pull origin dev
 
-$UE = "C:\Program Files\Epic Games\UE_5.5"
-$PROJ = "$PWD\ShadowbaneFPS.uproject"
-
-& "$UE\Engine\Build\BatchFiles\Build.bat" -projectfiles -project="$PROJ" -game -engine -progress
-& "$UE\Engine\Build\BatchFiles\Build.bat" ShadowbaneFPSEditor Win64 Development -Project="$PROJ" -WaitMutex
+.\scripts\Build.ps1 -Target Editor -GenerateProjectFiles
+# also useful:  .\scripts\Build.ps1 -Target All
 ```
 
 Fix compile errors until green. Do not leave the tree broken on `dev`.
 
 ### B) Local smoke (PIE)
 ```powershell
-& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ"
+.\scripts\Run-Editor.ps1
+# or verbose logs:  .\scripts\Debug-Editor.ps1
+# or local dedicated + client:  .\scripts\Debug-Local.ps1
+# VS breakpoints:  .\scripts\Open-VS.ps1 -GenerateProjectFiles
 ```
 
 Expect: Broken Citadel greybox, team colors, HUD chips, world markers.  

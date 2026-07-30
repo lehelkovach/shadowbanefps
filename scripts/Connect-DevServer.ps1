@@ -2,19 +2,20 @@
 # Usage:
 #   .\scripts\Connect-DevServer.ps1
 #   .\scripts\Connect-DevServer.ps1 -Server "144.24.46.16:7777"
+#
+# Thin wrapper around Run-Game.ps1 for the OCI DEV address.
 
 param(
-    [string]$EngineRoot = "C:\Program Files\Epic Games\UE_5.5",
-    [string]$Server = "144.24.46.16:7777"
+    [string]$EngineRoot = "",
+    [string]$Server = "144.24.46.16:7777",
+    [switch]$VerboseLogs,
+    [switch]$Wait
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$UProject = Join-Path $ProjectRoot "ShadowbaneFPS.uproject"
-$Editor = Join-Path $EngineRoot "Engine\Binaries\Win64\UnrealEditor.exe"
-
-if (-not (Test-Path $UProject)) { throw "Missing $UProject" }
-if (-not (Test-Path $Editor)) { throw "Missing editor at $Editor" }
-
 Write-Host "Connecting to DEV server $Server ..."
-& $Editor $UProject $Server -game -log
+& (Join-Path $PSScriptRoot "Run-Game.ps1") `
+    -EngineRoot $EngineRoot `
+    -Server $Server `
+    -VerboseLogs:$VerboseLogs `
+    -Wait:$Wait

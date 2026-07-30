@@ -26,10 +26,11 @@ That covers Editor builds, PIE, automation, LinuxServer cook, and hot deploy to 
 | **SSH** | `ubuntu@144.24.46.16` |
 | **Branch** | `dev` (hot deploy) → merge to `main` when stable |
 | Docs | [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md), [`docs/OCI_DEPLOY.md`](docs/OCI_DEPLOY.md) |
-| Helpers | `scripts/Dev-Push.ps1`, `Setup-DevSsh.ps1`, `Cook-LinuxServer.ps1`, `Connect-DevServer.ps1` |
+| Helpers | `scripts/Build.ps1`, `Run-Editor.ps1`, `Debug-Local.ps1`, `Dev-Push.ps1`, `Connect-DevServer.ps1` — see [`docs/SCRIPTS.md`](docs/SCRIPTS.md) |
 
 ## Docs
 - **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0).
+- **[Scripts (build/run/debug)](docs/SCRIPTS.md)** — `Build.ps1`, `Run-*`, `Debug-*`, tests, deploy.
 - **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
   Windows build, Local Cursor Agent onboarding (§5), OCI dedicated-server plan.
 - **[OCI dedicated server](docs/OCI_DEPLOY.md)** — live IP, Terraform, deploy,
@@ -74,6 +75,13 @@ Source/
 docs/                      Design + setup + OCI deploy + testing docs
 infra/oci/                 Terraform + systemd for dedicated-server VMs
 scripts/deploy-server.sh   rsync + systemd restart (dev|release)
+scripts/Build.ps1          Editor / Game / Server / All
+scripts/Run-Editor.ps1     launch UE Editor (PIE)
+scripts/Run-Game.ps1       standalone client (-Server optional)
+scripts/Run-Server.ps1     local Win64 dedicated server
+scripts/Debug-Editor.ps1   build + verbose-log Editor
+scripts/Debug-Local.ps1    local server + client debug loop
+scripts/Open-VS.ps1        generate .sln + open Visual Studio
 scripts/Dev-Push.ps1       commit-friendly cook + hot deploy to DEV
 scripts/Setup-DevSsh.ps1   verify deploy SSH key → VM
 scripts/Cook-LinuxServer.ps1   Windows cook helper

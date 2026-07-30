@@ -85,6 +85,8 @@ Tests live under `Source/ShadowbaneFPS/Tests/` and are registered under the
 .\scripts\RunIntegrationTests.ps1
 ```
 
+Build / run / debug helpers (Editor, local dedicated, VS attach): see [`docs/SCRIPTS.md`](./SCRIPTS.md).
+
 Or manually (adjust `UE` path):
 
 ```powershell

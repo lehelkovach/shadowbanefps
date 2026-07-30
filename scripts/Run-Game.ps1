@@ -1,0 +1,63 @@
+# Launch ShadowbaneFPS as a standalone game client (-game).
+#
+# Usage:
+#   .\scripts\Run-Game.ps1                         # local standalone / offline
+#   .\scripts\Run-Game.ps1 -Server 127.0.0.1:7777  # connect to local dedicated
+#   .\scripts\Run-Game.ps1 -Server 144.24.46.16:7777
+#   .\scripts\Run-Game.ps1 -Build -VerboseLogs
+#
+# Prefers Binaries\Win64\ShadowbaneFPS.exe when present; otherwise Editor -game.
+
+param(
+    [string]$EngineRoot = "",
+    [string]$Server = "",
+    [ValidateSet("Development", "DebugGame", "Shipping")]
+    [string]$Config = "Development",
+    [switch]$Build,
+    [switch]$VerboseLogs,
+    [switch]$Wait,
+    [string]$ExtraArgs = ""
+)
+
+$ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "lib\UeCommon.ps1")
+
+$ProjectRoot = Get-SBProjectRoot
+$UProject = Get-SBUproject -ProjectRoot $ProjectRoot
+$Engine = Resolve-SBEngineRoot -EngineRoot $EngineRoot
+
+if ($Build) {
+    & (Join-Path $PSScriptRoot "Build.ps1") -Target Game -Config $Config -EngineRoot $Engine
+}
+
+$LogCmds = Get-SBDefaultLogCmds -VerboseLogs:$VerboseLogs
+$GameExe = Join-Path $ProjectRoot "Binaries\Win64\ShadowbaneFPS.exe"
+
+$argList = @()
+$exe = $null
+
+if (Test-Path $GameExe) {
+    $exe = $GameExe
+    Write-Host "Using cooked/built game binary: $GameExe"
+    if ($Server) { $argList += $Server }
+    $argList += @("-log", "-LogCmds=$LogCmds")
+}
+else {
+    $exe = Get-SBEditorExe -EngineRoot $Engine
+    Write-Host "No Binaries\Win64\ShadowbaneFPS.exe — launching Editor -game"
+    $argList += @($UProject)
+    if ($Server) { $argList += $Server }
+    $argList += @("-game", "-log", "-LogCmds=$LogCmds")
+}
+
+if ($ExtraArgs) { $argList += $ExtraArgs }
+
+Write-Host "Client args: $($argList -join ' ')"
+
+if ($Wait) {
+    & $exe @argList
+    exit $LASTEXITCODE
+}
+
+Start-Process -FilePath $exe -ArgumentList $argList -WorkingDirectory $ProjectRoot | Out-Null
+Write-Host "Client started (detached)."

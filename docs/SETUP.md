@@ -228,46 +228,59 @@ Local Agent **cannot** (today): fully drive the Unreal Editor UI like a human
 
 ### 5.4 Exact build + launch commands (Windows)
 
-Set `UE` to their engine root once per shell:
+Set `UE` to their engine root once per shell (or set env `UE_ROOT`):
 
 ```powershell
 $UE = "C:\Program Files\Epic Games\UE_5.5"
-$PROJ = "$PWD\ShadowbaneFPS.uproject"
+$env:UE_ROOT = $UE
 ```
+
+Prefer the repo scripts (see [`docs/SCRIPTS.md`](./SCRIPTS.md)):
+
+```powershell
+.\scripts\Build.ps1 -Target Editor -GenerateProjectFiles
+.\scripts\Run-Editor.ps1
+.\scripts\Run-Game.ps1
+.\scripts\Run-Server.ps1
+.\scripts\Debug-Local.ps1          # local dedicated + client
+.\scripts\Open-VS.ps1              # Visual Studio F5 / Attach
+.\scripts\Connect-DevServer.ps1    # 144.24.46.16:7777
+```
+
+Raw equivalents if you need them:
 
 **Generate project files** (first clone, or after adding C++ files):
 ```powershell
-& "$UE\Engine\Build\BatchFiles\Build.bat" -projectfiles -project="$PROJ" -game -engine -progress
+& "$UE\Engine\Build\BatchFiles\Build.bat" -projectfiles -project="$PWD\ShadowbaneFPS.uproject" -game -engine -progress
 ```
 
 **Compile Development Editor** (what you need to open the project):
 ```powershell
-& "$UE\Engine\Build\BatchFiles\Build.bat" ShadowbaneFPSEditor Win64 Development -Project="$PROJ" -WaitMutex
+& "$UE\Engine\Build\BatchFiles\Build.bat" ShadowbaneFPSEditor Win64 Development -Project="$PWD\ShadowbaneFPS.uproject" -WaitMutex
 ```
 
 **Launch the editor** (human does PIE / map work after it opens):
 ```powershell
-& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ"
+.\scripts\Run-Editor.ps1
 ```
 
 **Launch a standalone game client** (no editor chrome — good for playtest):
 ```powershell
-& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" -game -windowed -ResX=1920 -ResY=1080 -log
+.\scripts\Run-Game.ps1
 ```
 
-**Local listen-server smoke** (one process hosts, second joins — early netcheck):
+**Local dedicated + client**:
 ```powershell
-# Terminal A — host
-& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" -game -log
-
-# Terminal B — client join (after host is up)
-& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" 127.0.0.1:7777 -game -log
+.\scripts\Debug-Local.ps1
+# or manually:
+.\scripts\Run-Server.ps1 -Port 7777
+.\scripts\Run-Game.ps1 -Server 127.0.0.1:7777
 ```
 
 Once an OCI dedicated server exists (section 4), clients join with the VM IP:
 ```powershell
-& "$UE\Engine\Binaries\Win64\UnrealEditor.exe" "$PROJ" 144.24.46.16:7777 -game -log
-# or: .\scripts\Connect-DevServer.ps1
+.\scripts\Connect-DevServer.ps1
+# or: .\scripts\Run-Game.ps1 -Server 144.24.46.16:7777
 ```
 
 ### 5.5 Prompt the friend's Local Agent with this
