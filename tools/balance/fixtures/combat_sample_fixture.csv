@@ -1,0 +1,8 @@
+elapsed_s,kind,attacker,attacker_arch,attacker_team,victim,victim_arch,victim_team,power,amount,victim_hp_after,lethal,extra
+1.0,Damage,A,Channeler_Flame,Attackers,B,Templar_Bulwark,Defenders,BasicFire,22.00,148.00,0,""
+1.2,Damage,A,Channeler_Flame,Attackers,B,Templar_Bulwark,Defenders,FlameBolt,40.00,108.00,0,""
+1.5,Damage,A,Channeler_Flame,Attackers,B,Templar_Bulwark,Defenders,FlameBolt,50.00,58.00,0,""
+1.8,Kill,A,Channeler_Flame,Attackers,B,Templar_Bulwark,Defenders,FlameBolt,0.00,0.00,1,""
+2.0,Damage,C,Assassin_Shadow,Attackers,D,Healer_Prelate,Defenders,BasicFire,34.00,66.00,0,""
+2.5,Heal,E,Healer_Prelate,Defenders,D,Healer_Prelate,Defenders,HealAura,18.00,84.00,0,""
+3.0,Damage,F,Ranger_Scout,Attackers,G,Structure,Unassigned,BasicFire_Structure,55.00,900.00,0,"structure"

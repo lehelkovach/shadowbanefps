@@ -123,6 +123,14 @@ Paste failures back if red. Logging categories to filter in Output Log / server 
 
 After playtests, pull `Saved/Telemetry/combat_*.csv` (and match CSV) for build/power balance — damage and kills attributed attacker-build → victim-build.
 
+Balance analyst agent (no UE required):
+
+> Follow `BALANCE_AGENT_INSTRUCTIONS.md` — analyze Saved/Telemetry combat CSVs and recommend nerfs/buffs vs late Ubisoft Shadowbane balance themes.
+
+```powershell
+.\scripts\Analyze-CombatBalance.ps1 -Command summary -CompareLateSB
+```
+
 ### D) Implement / iterate gameplay (your job)
 **Source of truth:** `docs/game-design.md` (Draft 1.1+).
 

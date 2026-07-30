@@ -310,6 +310,12 @@ Combat and shop telemetry exist so we can **nerf/buff builds from evidence**, no
 - `Saved/Telemetry/match_<stamp>_<session>.csv` — match flow events (+ `BalanceSummary` rows)
 - `Saved/Telemetry/combat_<stamp>_<session>.csv` — combat rows for spreadsheet / notebook analysis
 
+**Query / agent:**
+- `python3 tools/balance/analyze_combat.py summary Saved/Telemetry --compare-late-sb`
+- `.\scripts\Analyze-CombatBalance.ps1` — build/class/power/armor/heal pivots
+- Agent prompt: [`BALANCE_AGENT_INSTRUCTIONS.md`](../BALANCE_AGENT_INSTRUCTIONS.md)
+- Late Ubisoft baseline (P22–P23 → 2009 shutdown): [`docs/reference/SHADOWBANE_LATE_ERA_BALANCE.md`](./reference/SHADOWBANE_LATE_ERA_BALANCE.md)
+
 Use combat CSV to answer: which builds delete which builds, which powers over-perform, lethality spikes after certain shop buys.
 
 ### Playtest questions

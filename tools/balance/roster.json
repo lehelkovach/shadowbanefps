@@ -1,0 +1,94 @@
+{
+  "source": "Source/ShadowbaneFPS/Characters/SBPilotRoster.cpp",
+  "note": "Keep in sync with docs/game-design.md §3 and SBPilotRoster.",
+  "archetypes": {
+    "Warrior_Blade": {
+      "display": "Ironbrand Warrior",
+      "race": "Human",
+      "class": "Warrior",
+      "promotion": "Warlord",
+      "discipline": "Blade Weaving",
+      "signature": "heavy melee pressure"
+    },
+    "Ranger_Scout": {
+      "display": "Greyfen Ranger",
+      "race": "Elf",
+      "class": "Ranger",
+      "promotion": "Huntress",
+      "discipline": "Way of the Bow",
+      "signature": "long-range bow / high mobility"
+    },
+    "Assassin_Shadow": {
+      "display": "Nightcoil Assassin",
+      "race": "Aelfborn",
+      "class": "Assassin",
+      "promotion": "Nightstalker",
+      "discipline": "Shadowmantle",
+      "signature": "stealth / close burst"
+    },
+    "Channeler_Flame": {
+      "display": "Ashwake Channeler",
+      "race": "Human",
+      "class": "Channeler",
+      "promotion": "Furia",
+      "discipline": "Flame",
+      "signature": "fire magic / siege burn"
+    },
+    "Healer_Prelate": {
+      "display": "Dawnward Prelate",
+      "race": "Human",
+      "class": "Healer",
+      "promotion": "Prelate",
+      "discipline": "Blessed Mantle",
+      "signature": "sustained healing aura"
+    },
+    "Wizard_Frost": {
+      "display": "Rimebind Wizard",
+      "race": "Elf",
+      "class": "Wizard",
+      "promotion": "Warlock",
+      "discipline": "Frost",
+      "signature": "crowd control / chill zones"
+    },
+    "Scout_Thief": {
+      "display": "Underlane Scout",
+      "race": "Shade",
+      "class": "Thief",
+      "promotion": "Saboteur",
+      "discipline": "Silent Step",
+      "signature": "scouting / detection / sabotage"
+    },
+    "Templar_Bulwark": {
+      "display": "Bastion Templar",
+      "race": "Dwarf",
+      "class": "Templar",
+      "promotion": "Paladin",
+      "discipline": "Bulwark",
+      "signature": "frontline hold / light heal"
+    },
+    "Siege_Engineer": {
+      "display": "Breachwright Engineer",
+      "race": "Dwarf",
+      "class": "Warrior",
+      "promotion": "Huntmaster",
+      "discipline": "Siegecraft",
+      "signature": "siege device / structure damage"
+    },
+    "Defender_Warden": {
+      "display": "Wallwarden",
+      "race": "Human",
+      "class": "Warrior",
+      "promotion": "Warlord",
+      "discipline": "Fortress",
+      "signature": "repair / emplacement defense"
+    },
+    "Structure": {
+      "display": "Structure",
+      "race": "",
+      "class": "Structure",
+      "promotion": "",
+      "discipline": "",
+      "signature": "destructible siege prop"
+    }
+  }
+}

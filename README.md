@@ -30,6 +30,7 @@ That covers Editor builds, PIE, automation, LinuxServer cook, and hot deploy to 
 
 ## Docs
 - **[Game design](docs/game-design.md)** — pilot design (Draft 1.1). §3 Shadowbane roster; §3.1 LoL/CS match shop; §16 future MMO path.
+- **[Balance analysis](docs/BALANCE_ANALYSIS.md)** — query combat CSVs; late Ubisoft SB compare; [`BALANCE_AGENT_INSTRUCTIONS.md`](./BALANCE_AGENT_INSTRUCTIONS.md).
 - **[Scripts (build/run/debug)](docs/SCRIPTS.md)** — `Build.ps1`, `Run-*`, `Debug-*`, tests, deploy.
 - **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
   Windows build, Local Cursor Agent onboarding (§5), OCI dedicated-server plan.
@@ -55,7 +56,7 @@ Implemented (C++ / server-authoritative):
 - Runtime **Broken Citadel** greybox (no `.umap` required yet)
 - Destructible gate/breach, courtyard capture, final keep objective
 - Debug HUD (timer, phase, stage, HP, roster)
-- Logging (`LogShadowbane` / `Server` / `Client` / `Net` / `Telemetry` / `Combat`) + match telemetry CSV
+- Logging + combat balance telemetry (`Saved/Telemetry/combat_*.csv`) + query tools / balance agent
 - Automation: `ShadowbaneFPS.Rules|Server|Client|Integration|...` (see `docs/TESTING.md`)
 - Placeholder art kit: team colors, role rune discs, HUD icon chips, world markers
 
@@ -89,7 +90,9 @@ scripts/Connect-DevServer.ps1  client → 144.24.46.16:7777
 scripts/RunAutomationTests.ps1 all ShadowbaneFPS.* headless
 scripts/RunClientTests.ps1     ShadowbaneFPS.Client.*
 scripts/RunServerTests.ps1     ShadowbaneFPS.Server.*
-scripts/RunIntegrationTests.ps1 ShadowbaneFPS.Integration.*
+scripts/Analyze-CombatBalance.ps1  query combat_*.csv (build/class/power)
+tools/balance/                 Python analyzer + roster join + fixtures
+BALANCE_AGENT_INSTRUCTIONS.md  **Balance analyst agent prompt**
 .github/workflows/deploy-dev.yml  optional SSH deploy Action
 .env.example               Required OCI/SSH env var NAMES (no values)
 GRACEN_CURSOR_AGENT_INSTRUCTIONS.md   **Gracen takeover prompt (client+server)**
