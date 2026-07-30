@@ -8,18 +8,25 @@ composition**, then adapt as the siege reveals what the enemy brought.
 The pilot deliberately tests one thing — the match structure and the information
 game — and leaves progression, economy, and persistence out of scope.
 
+## Start here (Gracen / local Cursor Agent)
+
+**Open and follow:** [`GRACEN_CURSOR_AGENT_INSTRUCTIONS.md`](./GRACEN_CURSOR_AGENT_INSTRUCTIONS.md)
+
+That prompt tells Cursor on a Windows UE 5.5 machine to build `ShadowbaneFPSEditor`,
+smoke-test the greybox, and run automation.
+
 ## Docs
 - **[Game design](docs/game-design.md)** — full pilot design spec (Draft 1.0).
 - **[Setup & operations](docs/SETUP.md)** — hardware roles, Epic/UE account,
-  Windows build, **friend Local Cursor Agent onboarding** (§5), and OCI
-  dedicated-server plan.
+  Windows build, Local Cursor Agent onboarding (§5), OCI dedicated-server plan.
 - **[Testing & logging](docs/TESTING.md)** — automation tests, log categories,
   telemetry CSV, headless run script.
 - **[Placeholder art](docs/PLACEHOLDER_ART.md)** — dummy icons/runes/colors now;
   real-art swap list later.
 
 ## Status
-Playable greybox pilot in progress. Engine target **UE 5.5** (`ShadowbaneFPS.uproject`).
+**UE 5.5 Editor build verified on Gracen's machine.** Engine target **5.5**
+(`ShadowbaneFPS.uproject`).
 
 Implemented (C++ / server-authoritative):
 - Match flow, 20-min clock, phases, conquest stages, overtime, victory
@@ -45,5 +52,7 @@ Source/
     Core/                  GameMode, GameState, PlayerState, shared types
     Characters/            Pre-built character archetype data asset
     Siege/                 Destructible structures, capture point, objective
-docs/                      Design doc + setup/ops guide
+    Art/                   Placeholder icons / runes / world markers
+docs/                      Design + setup + testing + placeholder art docs
+GRACEN_CURSOR_AGENT_INSTRUCTIONS.md   Local Cursor Agent prompt
 ```
