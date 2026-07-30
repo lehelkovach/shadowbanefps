@@ -119,7 +119,8 @@ Fix compile errors until green. Do not leave the tree broken on `dev`.
 Expect: Broken Citadel greybox, team colors, HUD chips, world markers.  
 With admin client: free-cam view of bots pushing capture/objective.  
 Controls (human pawn): WASD, mouse, LMB fire, `1-0` switch while dead, `R` respawn.  
-Admin console: `AddBots 8`, `AdminSpectate`.
+Admin console (today): Unreal `Exec` — `AddBots 8`, `AdminSpectate`.  
+**Planned:** CS-style in-game console — `` ` `` / `~` open/close, type test commands on-screen (`docs/DEV_WORKFLOW.md`).
 
 ### C) Automation
 ```powershell

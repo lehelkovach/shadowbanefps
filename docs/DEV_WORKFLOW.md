@@ -79,7 +79,7 @@ git commit -m "wip: ..."
 .\scripts\Connect-DevServer.ps1   # 144.24.46.16:7777
 ```
 
-Build/run/debug script map: [`docs/SCRIPTS.md`](./SCRIPTS.md). Bots/admin: [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md).
+Build/run/debug script map: [`docs/SCRIPTS.md`](./SCRIPTS.md). Bots/admin: [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md). Bot AI scripts: [`docs/BOT_SCRIPTING.md`](./BOT_SCRIPTING.md).
 
 Flags:
 
@@ -90,6 +90,22 @@ Flags:
 ```
 
 Requires: UE 5.5, Linux cross-compile toolchain, Git Bash, SSH deploy key.
+
+---
+
+## Planned: in-game developer console (CS-style)
+
+Build a **client console** like Counter-Strike for playtest / admin commands:
+
+| Piece | Spec |
+| --- | --- |
+| Toggle | `` ` `` / `~` opens and closes the console overlay |
+| Input | Type commands + Enter (history / autocomplete later) |
+| Purpose | Testing without leaving the match: spawn bots, spectate, cheat toggles, dump telemetry paths, reload bot scripts, etc. |
+| Today | Unreal’s built-in console (`UFUNCTION(Exec)` e.g. `AddBots`, `AdminSpectate`) — works in Editor / `-log` builds; **not** the ship UX |
+| Target | Our own HUD widget + command router so packaged Game/Admin clients always have a visible `~` console |
+
+Track under bots/admin polish: [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md). Do not block conquest loop on this; it is a developer quality-of-life item.
 
 ---
 

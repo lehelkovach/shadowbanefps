@@ -90,6 +90,8 @@ Tests live under `Source/ShadowbaneFPS/Tests/` and are registered under the
 
 Build / run / debug helpers (Editor, local dedicated, VS attach, **admin bots**): see [`docs/SCRIPTS.md`](./SCRIPTS.md) and [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md).
 
+**Planned developer UX:** CS-style client console (`` ` `` / `~` toggle) for typing test commands in packaged clients — see [`docs/DEV_WORKFLOW.md`](./DEV_WORKFLOW.md). Today use Unreal’s built-in `Exec` console (`AddBots`, `AdminSpectate`).
+
 Or manually (adjust `UE` path):
 
 ```powershell

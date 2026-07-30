@@ -300,8 +300,9 @@ Until humans fill queues, the pilot must be playtestable by one developer:
 | --- | --- |
 | AI bots | Archetype bots on both teams; each loads a `.sbbot` rule script (`Config/BotScripts/<ArchetypeId>.sbbot`) for chase / fire / hold / retreat. Launch with `?Bots=N`. |
 | Admin client | Join as free-cam spectator (`?AdminSpectate=1`); spawn bots via console `AddBots N`; watch siege + HUD; collect `combat_*.csv`. |
+| Dev console (planned) | Counter-Strike–style client console: `` ` `` / `~` toggles an on-screen command line for testing (`AddBots`, spectate, cheats, etc.). Today: Unreal `Exec` console. |
 | Script | `.\scripts\Run-AdminClient.ps1 -Bots 8` |
-| Doc | [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md), [`docs/BOT_SCRIPTING.md`](./BOT_SCRIPTING.md) |
+| Doc | [`docs/BOTS_AND_ADMIN.md`](./BOTS_AND_ADMIN.md), [`docs/BOT_SCRIPTING.md`](./BOT_SCRIPTING.md), [`docs/DEV_WORKFLOW.md`](./DEV_WORKFLOW.md) |
 
 Bots are **test fixtures**, not ship content. Tweak `.sbbot` files to change behavior without a rebuild; do not block the conquest loop on perfect AI.
 

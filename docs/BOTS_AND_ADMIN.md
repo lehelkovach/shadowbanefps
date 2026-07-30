@@ -25,12 +25,14 @@ Design pointer: `docs/game-design.md` §12.1.
 .\scripts\Run-Game.ps1 -ExtraArgs "?Bots=10?AdminSpectate=1"
 ```
 
-Console (while playing / spectating with authority):
+Console (while playing / spectating with authority) — **today** uses Unreal’s built-in console:
 
 ```
 AddBots 8
 AdminSpectate
 ```
+
+**Planned:** a Counter-Strike–style in-game console — press `` ` `` / `~` to open/close, type the same kind of test commands into an on-screen overlay (see [`DEV_WORKFLOW.md`](./DEV_WORKFLOW.md) § Planned console). Until that ships, Editor / `-log` Unreal console is fine.
 
 ## Behavior (scripted rules)
 
@@ -49,9 +51,10 @@ Not in v1: behavior trees, cover, shop buys, coordinated pushes, voice.
 1. **Ship v1** — bots + admin spectate + `.sbbot` scripts (this scaffold)  
 2. **PIE soak** — 8–10 bots, collect `Saved/Telemetry/combat_*.csv`  
 3. **Balance agent** — `BALANCE_AGENT_INSTRUCTIONS.md` on those CSVs  
-4. **Richer scripts** — heal/repair actions, shop buys, team-aware weights  
-5. **Dedicated admin** — optional second process: dedicated server with bots + thin spectator client connecting to DEV IP  
-6. **Recording** — demo/rec for async review  
+4. **CS-style `~` console** — client overlay toggle with `` ` `` / `~`; type test/admin commands (`AddBots`, spectate, cheats, script reload) without relying on Unreal’s hidden console  
+5. **Richer scripts** — heal/repair actions, shop buys, team-aware weights  
+6. **Dedicated admin** — optional second process: dedicated server with bots + thin spectator client connecting to DEV IP  
+7. **Recording** — demo/rec for async review  
 
 ## Code map
 
