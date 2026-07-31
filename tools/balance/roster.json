@@ -11,34 +11,34 @@
       "signature": "heavy melee pressure"
     },
     "Ranger_Scout": {
-      "display": "Greyfen Ranger",
+      "display": "Greyfen Warden",
       "race": "Elf",
-      "class": "Ranger",
+      "class": "Warden",
       "promotion": "Huntress",
       "discipline": "Way of the Bow",
       "signature": "long-range bow / high mobility"
     },
     "Assassin_Shadow": {
       "display": "Nightcoil Assassin",
-      "race": "Aelfborn",
+      "race": "High Elf",
       "class": "Assassin",
       "promotion": "Nightstalker",
       "discipline": "Shadowmantle",
       "signature": "stealth / close burst"
     },
     "Channeler_Flame": {
-      "display": "Ashwake Channeler",
+      "display": "Ashwake Spellweaver",
       "race": "Human",
-      "class": "Channeler",
+      "class": "Spellweaver",
       "promotion": "Furia",
       "discipline": "Flame",
       "signature": "fire magic / siege burn"
     },
     "Healer_Prelate": {
-      "display": "Dawnward Prelate",
+      "display": "Dawnward Smite Cleric",
       "race": "Human",
-      "class": "Healer",
-      "promotion": "Prelate",
+      "class": "Smite Cleric",
+      "promotion": "Smite Cleric",
       "discipline": "Blessed Mantle",
       "signature": "sustained healing aura"
     },
@@ -52,7 +52,7 @@
     },
     "Scout_Thief": {
       "display": "Underlane Scout",
-      "race": "Shade",
+      "race": "Nightshades",
       "class": "Thief",
       "promotion": "Saboteur",
       "discipline": "Silent Step",

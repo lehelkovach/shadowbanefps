@@ -19,7 +19,7 @@ if (-not (Test-Path $UProject)) {
     throw "Project not found: $UProject"
 }
 if (-not (Test-Path $EditorCmd)) {
-    throw "UnrealEditor-Cmd not found at $EditorCmd — pass -EngineRoot to your UE 5.5 install."
+    throw "UnrealEditor-Cmd not found at $EditorCmd - pass -EngineRoot to your UE 5.5 install."
 }
 
 Write-Host "Project : $UProject"

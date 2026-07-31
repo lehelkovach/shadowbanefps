@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "SBTypes.h"
+#include "Characters/SBCharacterCalculator.h"
 #include "SBPlayerState.generated.h"
 
 class USBCharacterArchetype;
@@ -42,6 +43,13 @@ public:
 
 	void SetAlive(bool bNewAlive);
 
+	/** shadowbanefps-derived FPS vitals overlay applied on next spawn. */
+	void SetCreationVitalsOverlay(const FSBCreationFpsVitals& Vitals, const FString& Race, const FString& Base, const FString& Prestige, const FString& Discipline = FString());
+	bool ConsumeCreationVitalsOverlay(FSBCreationFpsVitals& OutVitals);
+	bool HasCreationVitalsOverlay() const { return bHasCreationVitals; }
+	FString GetCreationSummary() const;
+	FString GetCreationRace() const { return CreationRace; }
+
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_Team, BlueprintReadOnly, Category = "Siege")
 	ESBTeam Team = ESBTeam::Unassigned;
@@ -51,6 +59,24 @@ protected:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
 	bool bAlive = false;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege|Builder")
+	bool bHasCreationVitals = false;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege|Builder")
+	FSBCreationFpsVitals CreationVitals;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege|Builder")
+	FString CreationRace;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege|Builder")
+	FString CreationBaseClass;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege|Builder")
+	FString CreationPrestige;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege|Builder")
+	FString CreationDiscipline;
 
 	/** Resolved locally from SelectedArchetypeId; not replicated. */
 	UPROPERTY(Transient)

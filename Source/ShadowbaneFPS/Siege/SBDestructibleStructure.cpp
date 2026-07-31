@@ -33,7 +33,25 @@ ASBDestructibleStructure::ASBDestructibleStructure()
 void ASBDestructibleStructure::BeginPlay()
 {
 	Super::BeginPlay();
+	if (Health <= 0.f || Health > MaxHealth)
+	{
+		Health = MaxHealth;
+	}
+	if (HasAuthority())
+	{
+		RefreshState();
+	}
+	ApplyVisualState();
+}
+
+void ASBDestructibleStructure::ConfigureStructure(float InMaxHealth, const FVector& MeshScale)
+{
+	MaxHealth = FMath::Max(1.f, InMaxHealth);
 	Health = MaxHealth;
+	if (Mesh)
+	{
+		Mesh->SetRelativeScale3D(MeshScale);
+	}
 	if (HasAuthority())
 	{
 		RefreshState();
@@ -48,7 +66,7 @@ void ASBDestructibleStructure::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	DOREPLIFETIME(ASBDestructibleStructure, Health);
 }
 
-void ASBDestructibleStructure::ApplyStructureDamage(float Amount, AController* Instigator, FName AttackerArchetype, FName PowerId)
+void ASBDestructibleStructure::ApplyStructureDamage(float Amount, AController* DamageInstigator, FName AttackerArchetype, FName PowerId)
 {
 	if (!HasAuthority() || Amount <= 0.f || State == ESBStructureState::Destroyed)
 	{
@@ -61,7 +79,7 @@ void ASBDestructibleStructure::ApplyStructureDamage(float Amount, AController* I
 	{
 		if (USBMatchTelemetry* Telemetry = GM->GetTelemetry())
 		{
-			const ASBPlayerState* KillerPS = Instigator ? Instigator->GetPlayerState<ASBPlayerState>() : nullptr;
+			const ASBPlayerState* KillerPS = DamageInstigator ? DamageInstigator->GetPlayerState<ASBPlayerState>() : nullptr;
 			FSBCombatMetric Metric;
 			Metric.AttackerName = KillerPS ? KillerPS->GetPlayerName() : TEXT("none");
 			Metric.AttackerArchetype = !AttackerArchetype.IsNone() ? AttackerArchetype
@@ -162,14 +180,9 @@ void ASBDestructibleStructure::ApplyVisualState()
 	switch (State)
 	{
 	case ESBStructureState::Intact:
-		Mesh->SetVisibility(true);
-		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		Mesh->SetRelativeScale3D(FVector(1.5f, 8.f, 4.f));
-		break;
 	case ESBStructureState::Damaged:
 		Mesh->SetVisibility(true);
 		Mesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		Mesh->SetRelativeScale3D(FVector(1.2f, 8.f, 3.f));
 		break;
 	case ESBStructureState::Destroyed:
 		Mesh->SetVisibility(false);

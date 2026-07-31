@@ -1,7 +1,7 @@
 # Shared Unreal helpers for ShadowbaneFPS scripts.
 # Dot-source from other scripts:  . (Join-Path $PSScriptRoot "lib\UeCommon.ps1")
 #
-# This file lives in scripts/lib/ — project root is two levels up.
+# This file lives in scripts/lib/ - project root is two levels up.
 
 $script:SB_LibDir = $PSScriptRoot
 $script:SB_ScriptsDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -58,9 +58,17 @@ function Get-SBEditorCmdExe {
 function Get-SBDefaultLogCmds {
     param([switch]$VerboseLogs)
     if ($VerboseLogs) {
-        return 'LogShadowbane Log,LogShadowbaneServer Log,LogShadowbaneClient Log,LogShadowbaneNet Verbose,LogShadowbaneCombat Verbose,LogShadowbaneTelemetry Log'
+        return 'LogShadowbane Log,LogShadowbaneServer Log,LogShadowbaneClient Verbose,LogShadowbaneNet Verbose,LogShadowbaneCombat Verbose,LogShadowbaneTelemetry Log'
     }
     return 'LogShadowbane Log,LogShadowbaneServer Log,LogShadowbaneClient Log,LogShadowbaneNet Log'
+}
+
+function Get-SBDebugArgs {
+    param([switch]$VerboseLogs)
+    if ($VerboseLogs) {
+        return @('-SBDebug', '-SBVerbose')
+    }
+    return @('-SBDebug')
 }
 
 function Invoke-SBUbtBuild {

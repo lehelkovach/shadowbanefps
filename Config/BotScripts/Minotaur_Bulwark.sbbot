@@ -1,0 +1,11 @@
+# Horned Gatebreaker — smash into structures / melee.
+
+id: Minotaur_Bulwark
+role: melee
+retarget: 0.7
+engage: 550
+fire: 0.40
+
+when enemy in_range 4500 -> pursue fire
+when structure intact -> pursue fire
+when else -> pursue

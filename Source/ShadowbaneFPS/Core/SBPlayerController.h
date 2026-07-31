@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "Characters/SBCharacterCalculator.h"
 #include "SBPlayerController.generated.h"
 
 class USBCharacterArchetype;
@@ -37,6 +38,16 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerRequestRespawn();
 
+	/** shadowbanefps-style creation builder (while dead). Toggle with C. */
+	UFUNCTION(BlueprintPure, Category = "Siege|Builder")
+	bool IsCreationBuilderOpen() const { return bCreationBuilderOpen; }
+
+	UFUNCTION(BlueprintPure, Category = "Siege|Builder")
+	FSBCharacterBuildState GetCreationBuild() const { return CreationBuild; }
+
+	UFUNCTION(Server, Reliable)
+	void ServerConfirmCreationBuild(const FString& Race, const FString& BaseClass, const FString& Prestige, const FString& Discipline);
+
 	/** Admin free-cam spectate for bot-populated playtests. */
 	UFUNCTION(BlueprintCallable, Category = "Siege|Admin")
 	void EnterAdminSpectate();
@@ -56,6 +67,14 @@ public:
 	/** Console: AdminSpectate */
 	UFUNCTION(Exec)
 	void AdminSpectate();
+
+	/** Console: SBDebugMsg "text" — push an on-screen upper-left message. */
+	UFUNCTION(Exec)
+	void SBDebugMsg(const FString& Message);
+
+	/** Console / key: spawn test bots on the listen/dedicated server. */
+	UFUNCTION(Exec)
+	void SpawnTestBots(int32 Count = 6);
 
 protected:
 	virtual void PlayerTick(float DeltaTime) override;
@@ -85,5 +104,24 @@ private:
 	void SelectArchetypeSlot7();
 	void SelectArchetypeSlot8();
 	void SelectArchetypeSlot9();
+	void TryCastOrSelectArchetype(int32 SlotIndex);
+	void RequestCastSpell(int32 SlotIndex);
+	void RecallPressed();
 	void RequestRespawnPressed();
+	void SpawnTestBotsPressed();
+
+	void ToggleCreationBuilder();
+	void BuilderCycleRaceNext();
+	void BuilderCycleRacePrev();
+	void BuilderCycleBaseNext();
+	void BuilderCycleBasePrev();
+	void BuilderCyclePrestigeNext();
+	void BuilderCyclePrestigePrev();
+	void BuilderCycleDisciplineNext();
+	void BuilderCycleDisciplinePrev();
+	void BuilderConfirm();
+	void EnsureCreationBuildInitialized();
+
+	bool bCreationBuilderOpen = false;
+	FSBCharacterBuildState CreationBuild;
 };

@@ -1,13 +1,10 @@
-# Greyfen Ranger — longer engage, kite slightly when pressed.
-
+# Aggressive ranger — shoot while closing.
 id: Ranger_Scout
-role: scout
-retarget: 1.1
-engage: 4000
-fire: 0.28
+role: ranged
+retarget: 0.7
+engage: 3500
+fire: 0.3
 
-when enemy in_range 900 -> retreat
-when enemy in_range 4000 -> pursue fire
-when capture open -> pursue
-when objective unlocked -> pursue
-when else -> hold
+when enemy in_range 6000 -> pursue fire
+when enemy in_range 9000 -> pursue fire
+when else -> pursue

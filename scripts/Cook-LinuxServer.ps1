@@ -23,7 +23,7 @@ if (-not $ArchiveDir) {
 
 if (-not (Test-Path $UProject)) { throw "Missing $UProject" }
 if (-not (Test-Path $RunUAT)) {
-    throw "RunUAT not found at $RunUAT — install UE 5.5 and pass -EngineRoot"
+    throw "RunUAT not found at $RunUAT - install UE 5.5 and pass -EngineRoot"
 }
 
 Write-Host "Project : $UProject"

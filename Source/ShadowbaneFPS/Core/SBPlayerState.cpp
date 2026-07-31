@@ -17,6 +17,12 @@ void ASBPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ASBPlayerState, Team);
 	DOREPLIFETIME(ASBPlayerState, SelectedArchetypeId);
 	DOREPLIFETIME(ASBPlayerState, bAlive);
+	DOREPLIFETIME(ASBPlayerState, bHasCreationVitals);
+	DOREPLIFETIME(ASBPlayerState, CreationVitals);
+	DOREPLIFETIME(ASBPlayerState, CreationRace);
+	DOREPLIFETIME(ASBPlayerState, CreationBaseClass);
+	DOREPLIFETIME(ASBPlayerState, CreationPrestige);
+	DOREPLIFETIME(ASBPlayerState, CreationDiscipline);
 }
 
 void ASBPlayerState::SetTeam(ESBTeam NewTeam)
@@ -61,6 +67,44 @@ void ASBPlayerState::SetAlive(bool bNewAlive)
 	{
 		bAlive = bNewAlive;
 	}
+}
+
+void ASBPlayerState::SetCreationVitalsOverlay(const FSBCreationFpsVitals& Vitals, const FString& Race, const FString& Base, const FString& Prestige, const FString& Discipline)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	CreationVitals = Vitals;
+	CreationRace = Race;
+	CreationBaseClass = Base;
+	CreationPrestige = Prestige;
+	CreationDiscipline = Discipline;
+	bHasCreationVitals = true;
+}
+
+bool ASBPlayerState::ConsumeCreationVitalsOverlay(FSBCreationFpsVitals& OutVitals)
+{
+	if (!bHasCreationVitals)
+	{
+		return false;
+	}
+	OutVitals = CreationVitals;
+	// Keep overlay sticky across respawns of the same build (do not clear).
+	return true;
+}
+
+FString ASBPlayerState::GetCreationSummary() const
+{
+	if (!bHasCreationVitals)
+	{
+		return FString();
+	}
+	if (CreationDiscipline.IsEmpty())
+	{
+		return FString::Printf(TEXT("%s %s / %s"), *CreationRace, *CreationBaseClass, *CreationPrestige);
+	}
+	return FString::Printf(TEXT("%s %s / %s [%s]"), *CreationRace, *CreationBaseClass, *CreationPrestige, *CreationDiscipline);
 }
 
 void ASBPlayerState::OnRep_Team()

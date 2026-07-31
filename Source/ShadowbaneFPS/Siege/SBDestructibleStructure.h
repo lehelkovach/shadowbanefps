@@ -26,10 +26,14 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Siege")
-	void ApplyStructureDamage(float Amount, AController* Instigator = nullptr, FName AttackerArchetype = NAME_None, FName PowerId = NAME_None);
+	void ApplyStructureDamage(float Amount, AController* DamageInstigator = nullptr, FName AttackerArchetype = NAME_None, FName PowerId = NAME_None);
 
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	void Repair(float Amount);
+
+	/** Call immediately after spawn (or via deferred spawn) to set HP + mesh scale. */
+	UFUNCTION(BlueprintCallable, Category = "Siege")
+	void ConfigureStructure(float InMaxHealth, const FVector& MeshScale);
 
 	UFUNCTION(BlueprintPure, Category = "Siege")
 	ESBStructureState GetState() const { return State; }

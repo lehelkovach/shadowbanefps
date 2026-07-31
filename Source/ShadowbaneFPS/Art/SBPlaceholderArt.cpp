@@ -65,6 +65,7 @@ FString USBPlaceholderArt::InferCode(const USBCharacterArchetype* Archetype)
 	if (Id.Contains(TEXT("Templar"))) return TEXT("TMP");
 	if (Id.Contains(TEXT("Siege")) || Id.Contains(TEXT("Engineer"))) return TEXT("SGE");
 	if (Id.Contains(TEXT("Warden"))) return TEXT("WDN");
+	if (Id.Contains(TEXT("Minotaur"))) return TEXT("MIN");
 
 	return Id.Left(3).ToUpper();
 }

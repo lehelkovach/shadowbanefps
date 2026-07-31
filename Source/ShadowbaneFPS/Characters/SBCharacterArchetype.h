@@ -62,6 +62,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shadowbane")
 	FText Race;
 
+	/** Fighter / Healer / Mage / Rogue — Morloch Four Paths. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shadowbane")
+	FText BasePath;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Shadowbane")
 	FText Class;
 
@@ -81,6 +85,20 @@ public:
 	/** Combat / traversal stats applied to the shared pawn at spawn. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	float MaxHealth = 100.f;
+
+	/** Race/class mana pool (Spirit/Int bias). HUD shows current/max as a bar. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float MaxMana = 100.f;
+
+	/** Race/class stamina pool (Constitution bias). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float MaxStamina = 100.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float ManaRegenPerSecond = 8.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+	float StaminaRegenPerSecond = 14.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	float MoveSpeed = 600.f;
@@ -125,4 +143,11 @@ public:
 	/** Max copies of this archetype allowed per team (0 = unlimited). See §3, §9. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rules", meta = (ClampMin = "0"))
 	int32 PerTeamDuplicateLimit = 1;
+
+	/**
+	 * True = close-range server sweep (sword/blade). False = hitscan (bow/bolt).
+	 * Set from roster so Warrior / Assassin swing while Rangers shoot.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Gameplay")
+	bool bMeleeAttack = false;
 };

@@ -9,7 +9,8 @@ param(
     [string]$EngineRoot = "",
     [string]$Server = "144.24.46.16:7777",
     [switch]$VerboseLogs,
-    [switch]$Wait
+    [switch]$Wait,
+    [string]$ExtraArgs = "-dx11"
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,4 +19,5 @@ Write-Host "Connecting to DEV server $Server ..."
     -EngineRoot $EngineRoot `
     -Server $Server `
     -VerboseLogs:$VerboseLogs `
-    -Wait:$Wait
+    -Wait:$Wait `
+    -ExtraArgs $ExtraArgs

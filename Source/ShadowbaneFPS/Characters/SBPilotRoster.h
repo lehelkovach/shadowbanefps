@@ -1,7 +1,8 @@
 // Copyright shadowbanefps.
 //
-// Runtime factory for the curated ~10-character pilot roster (design doc §3, §12).
+// Runtime factory for the curated ~11-character pilot roster (design doc §3, §12).
 // Built in C++ so the project is playable before any .uasset data assets exist.
+// Lore matrix: docs/reference/SHADOWBANE_RACE_CLASS_ROSTER.md
 
 #pragma once
 
@@ -26,6 +27,7 @@ private:
 		FName Id,
 		const TCHAR* DisplayName,
 		const TCHAR* Race,
+		const TCHAR* BasePath,
 		const TCHAR* ClassName,
 		const TCHAR* Promotion,
 		const TCHAR* Discipline,
@@ -37,6 +39,10 @@ private:
 		uint8 Detection,
 		uint8 Siege,
 		float MaxHealth,
+		float MaxMana,
+		float MaxStamina,
+		float ManaRegen,
+		float StaminaRegen,
 		float MoveSpeed,
 		float AttackDamage,
 		float AttackRange,
@@ -46,5 +52,6 @@ private:
 		float RepairPerSecond,
 		bool bAttackerEligible,
 		bool bDefenderEligible,
-		int32 DuplicateLimit);
+		int32 DuplicateLimit,
+		bool bMeleeAttack = false);
 };

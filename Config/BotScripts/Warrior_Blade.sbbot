@@ -1,13 +1,11 @@
-# Ironbrand Warrior — close pressure, then siege goals.
-
+# Aggressive warrior — close and swing.
 id: Warrior_Blade
-role: fighter
-retarget: 1.0
-engage: 2200
-fire: 0.45
+role: melee
+retarget: 0.6
+engage: 500
+fire: 0.35
 
-when enemy in_range 2200 -> pursue fire
-when capture open -> pursue
-when objective unlocked -> pursue
+when enemy in_range 4500 -> pursue fire
+when enemy in_range 8000 -> pursue fire
 when structure intact -> pursue fire
-when else -> hold
+when else -> pursue

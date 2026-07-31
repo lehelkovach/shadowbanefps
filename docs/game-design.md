@@ -72,9 +72,9 @@ Every pre-built character is authored with this stack (shown to the **owning tea
 
 | Layer | Meaning in the pilot |
 | --- | --- |
-| **Race** | Fantasy lineage that players recognize (Human, Elf, Aelfborn, Dwarf, Shade, …). Affects silhouette and expected fantasy; may later bias resists / mobility. |
-| **Class** | Base vocation (Warrior, Ranger, Assassin, Channeler, Healer, Wizard, Thief, Templar, …). |
-| **Promotion** | Advanced path (Warlord, Huntress, Nightstalker, Furia, Prelate, Warlock, …). |
+| **Race** | Fantasy lineage that players recognize (Human, Elf, High Elf, Dwarf, Nightshades, …). Affects silhouette and expected fantasy; may later bias resists / mobility. |
+| **Class** | Base vocation (Warrior, Warden, Assassin, Spellweaver, Healer, Wizard, Thief, Templar, …). |
+| **Promotion** | Advanced path (Warlord, Huntress, Nightstalker, Furia, Smite Cleric, Warlock, …). |
 | **Discipline** | Training / school (Blade Weaving, Way of the Bow, Shadowmantle, Flame, Frost, Siegecraft, …). |
 | **Powers / runes** | Readable signature abilities baked into the pre-built (melee pressure, stealth, fire siege burn, heal aura, chill CC, detection, repair). Shop can augment, not replace, the fantasy. |
 | **Equipment / resists** | Purchased in the **match shop** (§3.1) as simple gear / rune items. Observable in combat; enemy does not see your buy list. |
@@ -104,33 +104,36 @@ The pilot does **not** ship a full trainer / freeform rune-slotting UI. It **doe
 
 ### Curated pilot roster (authoritative list)
 
-Canonical runtime source: `Source/ShadowbaneFPS/Characters/SBPilotRoster.cpp`. Keep this table and that file in sync.
+Canonical runtime source: `Source/ShadowbaneFPS/Characters/SBPilotRoster.cpp`.
+Lore matrix (Morloch Wiki → Four Paths / race innates / vitals): `docs/reference/SHADOWBANE_RACE_CLASS_ROSTER.md`.
+Keep this table, that reference, and the C++ roster in sync.
 
-| Id | Display name | Race | Class | Promotion | Discipline | Signature | Side | Dup |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `Warrior_Blade` | Ironbrand Warrior | Human | Warrior | Warlord | Blade Weaving | heavy melee pressure | Both | 2 |
-| `Ranger_Scout` | Greyfen Ranger | Elf | Ranger | Huntress | Way of the Bow | long-range bow / high mobility | Both | 2 |
-| `Assassin_Shadow` | Nightcoil Assassin | Aelfborn | Assassin | Nightstalker | Shadowmantle | stealth / close burst | Both | 1 |
-| `Channeler_Flame` | Ashwake Channeler | Human | Channeler | Furia | Flame | fire magic / siege burn | Both | 1 |
-| `Healer_Prelate` | Dawnward Prelate | Human | Healer | Prelate | Blessed Mantle | sustained healing aura | Both | 2 |
-| `Wizard_Frost` | Rimebind Wizard | Elf | Wizard | Warlock | Frost | crowd control / chill zones | Both | 1 |
-| `Scout_Thief` | Underlane Scout | Shade | Thief | Saboteur | Silent Step | scouting / detection / sabotage | Both | 2 |
-| `Templar_Bulwark` | Bastion Templar | Dwarf | Templar | Paladin | Bulwark | frontline hold / light heal | Both | 2 |
-| `Siege_Engineer` | Breachwright Engineer | Dwarf | Warrior | Huntmaster | Siegecraft | siege device / structure damage | Attackers | 1 |
-| `Defender_Warden` | Wallwarden | Human | Warrior | Warlord | Fortress | repair / emplacement defense | Defenders | 2 |
+| Id | Display name | Race | Path | Class | Promotion | Discipline | Signature | Side | Dup |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `Warrior_Blade` | Ironbrand Warrior | Human | Fighter | Warrior | Warlord | Blade Weaving | heavy melee pressure | Both | 2 |
+| `Ranger_Scout` | Greyfen Warden | Elf | Rogue | Warden | Huntress | Way of the Bow | long-range bow / high mobility | Both | 2 |
+| `Assassin_Shadow` | Nightcoil Assassin | High Elf | Rogue | Assassin | Nightstalker | Shadowmantle | stealth / close burst / snare-break | Both | 1 |
+| `Channeler_Flame` | Ashwake Spellweaver | Human | Mage | Spellweaver | Furia | Flame | fire magic / siege burn | Both | 1 |
+| `Healer_Prelate` | Dawnward Smite Cleric | Human | Healer | Smite Cleric | Smite Cleric | Blessed Mantle | sustained healing aura | Both | 2 |
+| `Wizard_Frost` | Rimebind Wizard | Elf | Mage | Wizard | Warlock | Frost | crowd control / chill zones | Both | 1 |
+| `Scout_Thief` | Underlane Scout | Nightshades | Rogue | Thief | Saboteur | Silent Step | scouting / detection / sabotage | Both | 2 |
+| `Templar_Bulwark` | Bastion Templar | Dwarf | Fighter | Templar | Paladin | Bulwark | frontline hold / light heal | Both | 2 |
+| `Siege_Engineer` | Breachwright Engineer | Dwarf | Fighter | Warrior | Huntmaster | Siegecraft | siege device / structure damage | Attackers | 1 |
+| `Defender_Warden` | Wallwarden | Human | Fighter | Warrior | Warlord | Fortress | repair / emplacement defense | Defenders | 2 |
+| `Minotaur_Bulwark` | Horned Gatebreaker | Minotaur | Fighter | Warrior | Warlord | Blade Weaving | minotaur melee bruiser / gate pressure | Both | 1 |
 
-Coverage the roster must keep: melee, ranged, stealth, fire siege mage, healer, frost CC, detection/scout, tank/support, attacker siege specialist, defender repair/emplacement.
+Coverage the roster must keep: melee, ranged, stealth, fire siege mage, healer, frost CC, detection/scout, tank/support, attacker siege specialist, defender repair/emplacement, distinct Minotaur silhouette.
 
 ### Selection rules for the pilot
 
 - Every option is fully pre-built and immediately playable (a **character**, not a loose skill bundle).
 - Players then **buy gear** into the 4 slots (§3.1) before first spawn.
-- Roster size ~8–12; the table above is the current 10.
+- Roster size ~8–12; the table above is the current **11**.
 - Duplicate limits preserve composition clarity.
-- Own team: full race/class/promotion/discipline + role profile + signature + own shop loadout. Enemy team: never shown as a sheet — only observed in the field (§4).
+- Own team: full race / base path / class / promotion / discipline + role profile + signature + own shop loadout. Enemy team: never shown as a sheet — only observed in the field (§4).
 - Expanding the roster means adding Shadowbane-legible builds (new race/class/promotion/discipline + signature), not anonymous FPS roles.
 
-**Design intent:** The team composition is a strategic wager in Shadowbane terms. Shop buys are the second wager (resist the Flame Channeler? stack detection vs Assassin?). Discovery and post-death switches (§9) are how teams adapt without erasing that opening wager.
+**Design intent:** The team composition is a strategic wager in Shadowbane terms. Shop buys are the second wager (resist the Flame Spellweaver? stack detection vs Assassin?). Discovery and post-death switches (§9) are how teams adapt without erasing that opening wager.
 
 ## 4. Hidden Composition and Battlefield Intelligence
 
@@ -158,25 +161,32 @@ Teams may conceal key characters, delay signature powers, stage a false frontal 
 
 ## 6. Pilot Map: The Broken Citadel
 
-The Broken Citadel is a compact asymmetrical fortress map designed to move a full match through several different combat spaces. The fortress is already damaged enough to support multiple plausible breaches, but the defenders begin with control of the walls, interior routes, and final objective.
+The Broken Citadel is a compact asymmetrical **assault** map — think *BF1942 Omaha Beach* or *Return to Castle Wolfenstein* castle push, not a pristine death-fortress. Defenders start with the interior and height, but the outer shell is already half-ruined: open approaches, pre-broken curtain gaps, and attacker siege tools so the match does **not** default to a defender win via wall camping.
+
+**Assault tone (hard rules for greybox + art):**
+- Outer defenses are **damaged and incomplete** — multiple walk-in / climb-in gaps before the main gate ever falls.
+- Attackers get **readable siege toys** on the field (ram / ballista / siege charge) that crack structures faster than infantry alone.
+- Defender emplacements are lethal in a lane but **fixed, exposed, and flammable** — not an unbroken killbox.
+- No continuous high curtain that seals the courtyard; prefer ruined segments, rubble cover, and shallow ditches.
+- First contact ~30–45s across open ground (beach / siege field), then compress into courtyard → keep.
 
 High-level topology:
 
-- North approach — Wall / tower — Upper keep
-- Attacker staging — Siege field — Main gate — Courtyard — Inner keep / final objective
-- South approach — Service entrance — Lower keep — Defender deployment
+- North approach — Ruined wall / tower stub — Upper keep
+- Attacker staging — Open siege field — Main gate — Courtyard — Inner keep / final objective
+- South approach — Service breach — Lower keep — Defender deployment
 
 Primary flow: attacker staging -> siege field -> breach -> courtyard -> inner keep
 
 ### Major zones
 
 - **Attacker staging ground:** Protected initial deployment, character selection, route planning, and access to initial siege equipment. First contact should occur within roughly 30–45 seconds.
-- **Outer siege field:** Open and broken terrain where attackers establish pressure and defenders attempt to disrupt siege preparation.
-- **Main gate route:** The shortest, most visible, and most heavily defended path. It supports direct group pushes and siege equipment.
-- **Northern wall route:** An exposed vertical or elevated approach that rewards mobility, ranged control, and seizure of wall positions.
-- **Southern service route:** A slower concealed route through tunnels, ruins, or service passages that rewards scouting, stealth, detection, and close-range fighting.
-- **Courtyard:** The transition from outer siege to interior conquest. Capturing it unlocks an attacker forward spawn and forces defender fallback.
-- **Inner keep:** Tighter combat spaces, defender shortcuts, and the final objective. The map should culminate here rather than end at the first breach.
+- **Outer siege field:** Wide, exposed approach (Omaha-style) with sparse rubble cover where attackers push siege devices and defenders try to break crews — not a maze of outer baileys.
+- **Main gate route:** Short, loud, and supported by the battering ram / siege device. Dangerous, but intended to be breakable mid-match, not a permanent wall.
+- **Northern wall route:** Pre-collapsed curtain gap / climbable rubble — rewards mobility and ranged overwatch without requiring a full tower siege.
+- **Southern service route:** Already-open service breach / tunnel mouth into the yard — slower and tighter, good for scouts and flankers.
+- **Courtyard:** Transition after breach. Capturing it unlocks an attacker forward spawn and forces defender fallback.
+- **Inner keep:** Tighter combat spaces, defender shortcuts, and the final objective. Defense gets its real teeth *here*, not on the outer beach.
 
 ## 7. Siege and Conquest Mechanics
 
@@ -191,10 +201,11 @@ Primary flow: attacker staging -> siege field -> breach -> courtyard -> inner ke
 
 The minimum pilot should include one attacker-operated siege device and one defender-operated emplacement. Devices must be powerful enough to shape the fight but vulnerable enough to require protection, positioning, and counterplay.
 
-- **Attacker device:** a battering ram, cannon, ballista, or magical equivalent used primarily against structures.
-- **Defender emplacement:** a fixed weapon or defensive mechanism controlling a clear lane or breach zone.
+- **Attacker device:** a battering ram on the open siege field (crew with Interact). While crewed it advances toward the main gate and pulses structure damage. Destroyable by defenders.
+- **Defender emplacement:** a fixed weapon or defensive mechanism controlling a clear lane or breach zone (pilot follow-up — keep it one lane, not an unbroken killbox).
 - Operation exposes the user, limits mobility, and creates an obvious tactical target.
 - Destroyed devices remain unavailable long enough for the destruction to matter.
+- Gate / breach HP should fall to a coordinated ram push within a few minutes of pressure — not require the full match clock.
 
 ### Destructible structures
 
@@ -269,6 +280,7 @@ The pilot should preserve the recognizable capabilities and group interactions o
 - Recently observed enemy markers
 - Respawn countdown, available character selections, and **match shop / gold / 4 gear slots**
 - Final-objective progress
+- **Minimap + compass (pilot):** small corner siege map for self / teammate location, conquest stage landmarks (gate, courtyard, keep), and team pings, with a **compass** (N/E/S/W or bearing strip) so players can orient on the open siege field. Fog of war: no permanent enemy dots — only short-lived observed markers (§4). Prefer a schematic top-down of The Broken Citadel over a photographic radar.
 
 The interface must **not** reveal unseen enemies, the full opposing roster, enemy respawn selections, hidden loadouts / buys, or exact enemy cooldowns.
 
@@ -290,6 +302,7 @@ The interface must **not** reveal unseen enemies, the full opposing roster, enem
 - Small starter catalog (weapon/focus, armor/resist, rune charm, utility)
 - One final conquest objective
 - 20-minute timer and overtime
+- Corner minimap with compass (N/E/S/W), self/team/landmarks/pings (no permanent enemy radar)
 - **Basic AI bots + admin spectator client** to populate and watch matches without real players (§12.1)
 
 ### 12.1 Bots + admin spectator (populate testing)

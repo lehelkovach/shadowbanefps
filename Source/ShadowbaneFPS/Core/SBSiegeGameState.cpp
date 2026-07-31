@@ -3,6 +3,8 @@
 #include "SBSiegeGameState.h"
 #include "Characters/SBCharacterArchetype.h"
 #include "Characters/SBPilotRoster.h"
+#include "Core/SBMatchShopCatalog.h"
+#include "SBClientDebug.h"
 #include "SBLog.h"
 #include "Net/UnrealNetwork.h"
 
@@ -19,6 +21,14 @@ void ASBSiegeGameState::BeginPlay()
 	{
 		USBPilotRoster::BuildDefaultRoster(this, LocalRoster);
 	}
+
+	// Warm match-shop catalog for future shop UI (items-catalog.json).
+	USBMatchShopCatalog::Get().EnsureLoaded();
+}
+
+USBMatchShopCatalog& ASBSiegeGameState::GetMatchShopCatalog() const
+{
+	return USBMatchShopCatalog::Get();
 }
 
 void ASBSiegeGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -77,6 +87,7 @@ void ASBSiegeGameState::OnRep_Phase()
 {
 	UE_LOG(LogShadowbaneNet, Log, TEXT("OnRep_Phase -> %s"), *UEnum::GetValueAsString(Phase));
 	UE_LOG(LogShadowbaneClient, Log, TEXT("Client match phase -> %s"), *UEnum::GetValueAsString(Phase));
+	FSBClientDebug::PushMessage(FString::Printf(TEXT("Phase -> %s"), *UEnum::GetDisplayValueAsText(Phase).ToString()), 5.f);
 	OnPhaseChanged.Broadcast(Phase);
 }
 
@@ -84,5 +95,6 @@ void ASBSiegeGameState::OnRep_ConquestStage()
 {
 	UE_LOG(LogShadowbaneNet, Log, TEXT("OnRep_ConquestStage -> %s"), *UEnum::GetValueAsString(ConquestStage));
 	UE_LOG(LogShadowbaneClient, Log, TEXT("Client conquest stage -> %s"), *UEnum::GetValueAsString(ConquestStage));
+	FSBClientDebug::PushMessage(FString::Printf(TEXT("Front line -> %s"), *UEnum::GetDisplayValueAsText(ConquestStage).ToString()), 5.f);
 	OnConquestStageChanged.Broadcast(ConquestStage);
 }

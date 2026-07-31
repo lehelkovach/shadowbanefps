@@ -10,6 +10,7 @@
 #include "Siege/SBConquestObjective.h"
 #include "Siege/SBDestructibleStructure.h"
 #include "EngineUtils.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 ASBBotController::ASBBotController()
 {
@@ -82,21 +83,38 @@ void ASBBotController::Tick(float DeltaSeconds)
 		return;
 	}
 
-	ASBCharacter* Character = GetSBCharacter();
-	if (!Character || Character->GetHealth() <= 0.f)
+	ASBCharacter* BotChar = GetSBCharacter();
+	if (!BotChar || BotChar->GetHealth() <= 0.f)
 	{
 		return;
 	}
 
 	EnsureScriptLoaded();
 
+	SoftClampPawnToBounds();
+
 	RetargetCooldown -= DeltaSeconds;
 	FireCooldown -= DeltaSeconds;
 
+	// Prefer nearest enemy every tick for aggression (script still picks when retarget fires).
 	if (RetargetCooldown <= 0.f || !CurrentTarget.IsValid())
 	{
 		Think();
 		RetargetCooldown = FMath::Max(0.2f, ActiveScript.RetargetSeconds);
+	}
+
+	// If we somehow lost the enemy target, force reacquire enemies.
+	if (!CurrentTarget.IsValid() || Cast<ASBCharacter>(CurrentTarget.Get()) == nullptr)
+	{
+		FSBBotWorldFacts Facts;
+		GatherWorldFacts(Facts);
+		if (Facts.NearestEnemy)
+		{
+			CurrentTarget = Facts.NearestEnemy;
+			CurrentDecision.bWantFire = true;
+			CurrentDecision.bHold = false;
+			CurrentDecision.bRetreat = false;
+		}
 	}
 
 	if (CurrentDecision.bHold)
@@ -117,7 +135,7 @@ void ASBBotController::Tick(float DeltaSeconds)
 	{
 		SteerToward(Target->GetActorLocation(), DeltaSeconds);
 
-		const float DistSq = FVector::DistSquared(Character->GetActorLocation(), Target->GetActorLocation());
+		const float DistSq = FVector::DistSquared(BotChar->GetActorLocation(), Target->GetActorLocation());
 		const float Engage = ActiveScript.EngageRange > 0.f ? ActiveScript.EngageRange : 2800.f;
 		if (CurrentDecision.bWantFire && DistSq <= FMath::Square(Engage) && FireCooldown <= 0.f)
 		{
@@ -125,6 +143,8 @@ void ASBBotController::Tick(float DeltaSeconds)
 			FireCooldown = FMath::Max(0.15f, ActiveScript.FireInterval);
 		}
 	}
+
+	SoftClampPawnToBounds();
 }
 
 void ASBBotController::GatherWorldFacts(FSBBotWorldFacts& OutFacts) const
@@ -223,14 +243,15 @@ void ASBBotController::Think()
 
 void ASBBotController::SteerToward(const FVector& WorldTarget, float DeltaSeconds)
 {
-	ASBCharacter* Character = GetSBCharacter();
-	if (!Character)
+	ASBCharacter* BotChar = GetSBCharacter();
+	if (!BotChar)
 	{
 		return;
 	}
 
-	const FVector Loc = Character->GetActorLocation();
-	FVector Delta = WorldTarget - Loc;
+	const FVector Loc = BotChar->GetActorLocation();
+	FVector Goal = ClampToPlayableBounds(WorldTarget);
+	FVector Delta = Goal - Loc;
 	Delta.Z = 0.f;
 	if (Delta.SizeSquared() < FMath::Square(MoveAcceptanceRadius))
 	{
@@ -238,45 +259,83 @@ void ASBBotController::SteerToward(const FVector& WorldTarget, float DeltaSecond
 	}
 
 	const FVector Dir = Delta.GetSafeNormal();
-	Character->AddMovementInput(Dir, 1.f);
+	BotChar->AddMovementInput(Dir, 1.f);
 
 	const FRotator Desired = Dir.Rotation();
-	const FRotator NewRot = FMath::RInterpTo(Character->GetActorRotation(), Desired, DeltaSeconds, 8.f);
-	Character->SetActorRotation(FRotator(0.f, NewRot.Yaw, 0.f));
+	const FRotator NewRot = FMath::RInterpTo(BotChar->GetActorRotation(), Desired, DeltaSeconds, 8.f);
+	BotChar->SetActorRotation(FRotator(0.f, NewRot.Yaw, 0.f));
 	SetControlRotation(FRotator(0.f, NewRot.Yaw, 0.f));
 }
 
 void ASBBotController::SteerAwayFrom(const FVector& WorldThreat, float DeltaSeconds)
 {
-	ASBCharacter* Character = GetSBCharacter();
-	if (!Character)
+	ASBCharacter* BotChar = GetSBCharacter();
+	if (!BotChar)
 	{
 		return;
 	}
 
-	const FVector Loc = Character->GetActorLocation();
+	const FVector Loc = BotChar->GetActorLocation();
 	FVector Delta = Loc - WorldThreat;
 	Delta.Z = 0.f;
 	if (Delta.SizeSquared() < 1.f)
 	{
-		Delta = Character->GetActorForwardVector() * -1.f;
+		Delta = BotChar->GetActorForwardVector() * -1.f;
 		Delta.Z = 0.f;
 	}
 
+	FVector Goal = ClampToPlayableBounds(Loc + Delta.GetSafeNormal() * 400.f);
+	Delta = Goal - Loc;
+	Delta.Z = 0.f;
+
 	const FVector Dir = Delta.GetSafeNormal();
-	Character->AddMovementInput(Dir, 1.f);
+	BotChar->AddMovementInput(Dir, 1.f);
 
 	const FRotator Desired = Dir.Rotation();
-	const FRotator NewRot = FMath::RInterpTo(Character->GetActorRotation(), Desired, DeltaSeconds, 8.f);
-	Character->SetActorRotation(FRotator(0.f, NewRot.Yaw, 0.f));
+	const FRotator NewRot = FMath::RInterpTo(BotChar->GetActorRotation(), Desired, DeltaSeconds, 8.f);
+	BotChar->SetActorRotation(FRotator(0.f, NewRot.Yaw, 0.f));
 	SetControlRotation(FRotator(0.f, NewRot.Yaw, 0.f));
+}
+
+FVector ASBBotController::ClampToPlayableBounds(const FVector& Desired) const
+{
+	return PlayableBounds.GetClosestPointTo(Desired);
+}
+
+void ASBBotController::SoftClampPawnToBounds()
+{
+	ASBCharacter* BotChar = GetSBCharacter();
+	if (!BotChar)
+	{
+		return;
+	}
+
+	FVector Loc = BotChar->GetActorLocation();
+	if (Loc.Z < -50.f)
+	{
+		// Fell off — snap back onto the siege field.
+		Loc = FVector(FMath::Clamp(Loc.X, -5000.f, 3500.f), FMath::Clamp(Loc.Y, -2000.f, 2000.f), 120.f);
+		BotChar->SetActorLocation(Loc, false, nullptr, ETeleportType::ResetPhysics);
+		if (UCharacterMovementComponent* Move = BotChar->GetCharacterMovement())
+		{
+			Move->StopMovementImmediately();
+			Move->SetMovementMode(MOVE_Walking);
+		}
+		return;
+	}
+
+	const FVector Clamped = ClampToPlayableBounds(Loc);
+	if (!Clamped.Equals(Loc, 1.f))
+	{
+		BotChar->SetActorLocation(FVector(Clamped.X, Clamped.Y, Loc.Z), false, nullptr, ETeleportType::None);
+	}
 }
 
 void ASBBotController::TryFire()
 {
-	if (ASBCharacter* Character = GetSBCharacter())
+	if (ASBCharacter* BotChar = GetSBCharacter())
 	{
-		Character->BotFire();
+		BotChar->BotFire();
 	}
 }
 

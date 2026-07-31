@@ -8,6 +8,7 @@
 #include "SBSiegeGameState.generated.h"
 
 class USBCharacterArchetype;
+class USBMatchShopCatalog;
 
 /** Fired on all clients when the match phase changes (UI, music, VO cues). */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSBOnPhaseChanged, ESBMatchPhase, NewPhase);
@@ -52,8 +53,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Siege")
 	USBCharacterArchetype* FindArchetypeById(FName ArchetypeId) const;
 
-	UFUNCTION(BlueprintPure, Category = "Siege")
+	/** C++ only — UHT rejects TObjectPtr in UFUNCTION signatures. */
 	const TArray<TObjectPtr<USBCharacterArchetype>>& GetLocalRoster() const { return LocalRoster; }
+
+	/** shadowbanefps items-catalog stub (local singleton; not replicated). */
+	USBMatchShopCatalog& GetMatchShopCatalog() const;
 
 	// --- Server-authoritative setters (called by the GameMode) ---
 	void ServerSetPhase(ESBMatchPhase NewPhase);

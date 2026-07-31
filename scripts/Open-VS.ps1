@@ -6,7 +6,7 @@
 #   .\scripts\Open-VS.ps1 -Build
 #
 # Debug tips:
-#   1) Build Development Editor (default) — has symbols.
+#   1) Build Development Editor (default) - has symbols.
 #   2) Set startup project to ShadowbaneFPSEditor (or launch Editor first).
 #   3) Or: Debug → Attach to Process → UnrealEditor.exe / ShadowbaneFPSServer.exe
 #   4) Filter Output Log: LogShadowbaneServer / Client / Net
@@ -35,7 +35,7 @@ if ($GenerateProjectFiles -or -not (Test-Path $Sln)) {
 }
 
 if (-not (Test-Path $Sln)) {
-    throw "Solution not found at $Sln after generate — check UE/VS toolchain."
+    throw "Solution not found at $Sln after generate - check UE/VS toolchain."
 }
 
 if ($Build) {

@@ -1,13 +1,14 @@
-# Default siege bot — first matching rule wins.
+# Aggressive 5v5 filler — chase and fight enemies first.
 # See docs/BOT_SCRIPTING.md
 
 id: Default
 role: general
-retarget: 1.25
-engage: 2800
-fire: 0.55
+retarget: 0.75
+engage: 3200
+fire: 0.4
 
-when enemy in_range 2500 -> pursue fire
+when enemy in_range 5000 -> pursue fire
+when enemy in_range 8000 -> pursue fire
 when capture open -> pursue
 when objective unlocked -> pursue
 when structure intact -> pursue fire

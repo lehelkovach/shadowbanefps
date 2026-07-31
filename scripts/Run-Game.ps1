@@ -11,6 +11,7 @@
 param(
     [string]$EngineRoot = "",
     [string]$Server = "",
+    [int]$Bots = 0,
     [ValidateSet("Development", "DebugGame", "Shipping")]
     [string]$Config = "Development",
     [switch]$Build,
@@ -41,13 +42,18 @@ if (Test-Path $GameExe) {
     Write-Host "Using cooked/built game binary: $GameExe"
     if ($Server) { $argList += $Server }
     $argList += @("-log", "-LogCmds=$LogCmds")
+    $argList += Get-SBDebugArgs -VerboseLogs:$VerboseLogs
 }
 else {
     $exe = Get-SBEditorExe -EngineRoot $Engine
-    Write-Host "No Binaries\Win64\ShadowbaneFPS.exe — launching Editor -game"
-    $argList += @($UProject)
+    Write-Host "No Binaries\Win64\ShadowbaneFPS.exe - launching Editor -game"
+    # Map URL options (?Bots=N) land in GameMode::InitGame Options.
+    $mapUrl = "/Engine/Maps/Entry"
+    if ($Bots -gt 0) { $mapUrl = "/Engine/Maps/Entry?Bots=$Bots" }
+    $argList += @($UProject, $mapUrl)
     if ($Server) { $argList += $Server }
     $argList += @("-game", "-log", "-LogCmds=$LogCmds")
+    $argList += Get-SBDebugArgs -VerboseLogs:$VerboseLogs
 }
 
 if ($ExtraArgs) { $argList += $ExtraArgs }

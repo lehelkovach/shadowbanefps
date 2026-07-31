@@ -84,6 +84,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Siege")
 	void NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState* Killer, FName KillingPowerId = NAME_None);
 
+	void ScheduleRespawn(APlayerController* PC);
+	void ScheduleBotRespawn(ASBBotController* Bot);
+
 	/** Returns a roster entry by index, or null. */
 	UFUNCTION(BlueprintPure, Category = "Siege")
 	USBCharacterArchetype* GetRosterArchetype(int32 Index) const;
@@ -93,6 +96,9 @@ public:
 
 	/** Shared spawn path for humans and bots. */
 	bool SpawnCharacterForController(AController* Controller);
+
+	/** Team pad for recall / fountain return (same pads as spawn). */
+	bool GetSpawnTransformFor(const ASBPlayerState* PS, FVector& OutLocation, FRotator& OutRotation) const;
 
 	/** Match telemetry sink (design doc §12). Valid after StartMatch. */
 	UFUNCTION(BlueprintPure, Category = "Siege|Telemetry")
@@ -118,8 +124,6 @@ protected:
 	USBCharacterArchetype* FindDefaultArchetypeForTeam(ESBTeam Team) const;
 	USBCharacterArchetype* PickBotArchetype(ESBTeam Team) const;
 	ASBSpawnPoint* FindSpawnPoint(ESBTeam Team, const USBCharacterArchetype* Archetype) const;
-
-	void ScheduleRespawn(APlayerController* PC);
 
 	UPROPERTY(Transient)
 	TObjectPtr<ASBSiegeGameState> SiegeState = nullptr;

@@ -12,6 +12,7 @@
 #include "Characters/SBCharacter.h"
 #include "Characters/SBCharacterArchetype.h"
 #include "Characters/SBPilotRoster.h"
+#include "Characters/SBCharacterCalculator.h"
 #include "AI/SBBotController.h"
 #include "Maps/SBBrokenCitadelBuilder.h"
 #include "GameFramework/PlayerController.h"
@@ -466,6 +467,10 @@ void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState
 	{
 		ScheduleRespawn(PC);
 	}
+	else if (ASBBotController* Bot = Cast<ASBBotController>(Victim->GetOwningController()))
+	{
+		ScheduleBotRespawn(Bot);
+	}
 }
 
 void ASBSiegeGameMode::ScheduleRespawn(APlayerController* PC)
@@ -491,9 +496,45 @@ void ASBSiegeGameMode::ScheduleRespawn(APlayerController* PC)
 	}), RespawnDelaySeconds, false);
 }
 
+void ASBSiegeGameMode::ScheduleBotRespawn(ASBBotController* Bot)
+{
+	if (!Bot)
+	{
+		return;
+	}
+
+	TWeakObjectPtr<ASBBotController> WeakBot(Bot);
+	FTimerHandle Handle;
+	GetWorldTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([this, WeakBot]()
+	{
+		if (ASBBotController* AliveBot = WeakBot.Get())
+		{
+			if (ASBPlayerState* PS = AliveBot->GetPlayerState<ASBPlayerState>())
+			{
+				PS->SetAlive(true);
+			}
+			SpawnCharacterForController(AliveBot);
+		}
+	}), RespawnDelaySeconds, false);
+}
+
 bool ASBSiegeGameMode::SpawnPlayerFromController(APlayerController* PC)
 {
 	return SpawnCharacterForController(PC);
+}
+
+bool ASBSiegeGameMode::GetSpawnTransformFor(const ASBPlayerState* PS, FVector& OutLocation, FRotator& OutRotation) const
+{
+	if (!PS || PS->GetTeam() == ESBTeam::Unassigned)
+	{
+		return false;
+	}
+
+	const USBCharacterArchetype* Archetype = PS->GetSelectedArchetype();
+	ASBSpawnPoint* Spot = FindSpawnPoint(PS->GetTeam(), Archetype);
+	OutLocation = Spot ? Spot->GetActorLocation() : FVector(-4500.f, 0.f, 120.f);
+	OutRotation = Spot ? Spot->GetActorRotation() : FRotator::ZeroRotator;
+	return true;
 }
 
 bool ASBSiegeGameMode::SpawnCharacterForController(AController* Controller)
@@ -551,6 +592,11 @@ bool ASBSiegeGameMode::SpawnCharacterForController(AController* Controller)
 	}
 
 	Character->ApplyArchetype(Archetype);
+	FSBCreationFpsVitals OverlayVitals;
+	if (PS->ConsumeCreationVitalsOverlay(OverlayVitals))
+	{
+		Character->ApplyCreationVitals(OverlayVitals, PS->GetCreationRace());
+	}
 	Controller->Possess(Character);
 	PS->SetAlive(true);
 
@@ -599,6 +645,13 @@ int32 ASBSiegeGameMode::SpawnBots(int32 TotalBots)
 	int32 Atk = 0;
 	int32 Def = 0;
 	USBRulesLibrary::SplitBotsAcrossTeams(TotalBots, MaxBotsPerTeam, Atk, Def);
+
+	// 5v5 with human as attacker hero: leave one attacker slot open (Bots=9 → 4 atk + 5 def).
+	if (TotalBots == 9 && MaxBotsPerTeam >= 5)
+	{
+		Atk = 4;
+		Def = 5;
+	}
 
 	int32 Spawned = 0;
 	for (int32 i = 0; i < Atk; ++i)

@@ -19,7 +19,7 @@ bool FSBRoster_DefaultRosterShapeTest::RunTest(const FString& Parameters)
 
 	TestTrue(TEXT("Pilot roster has at least 8 archetypes"), Roster.Num() >= 8);
 	TestTrue(TEXT("Pilot roster has at most 12 archetypes"), Roster.Num() <= 12);
-	TestEqual(TEXT("Current curated count is 10"), Roster.Num(), 10);
+	TestEqual(TEXT("Current curated count is 11"), Roster.Num(), 11);
 
 	TSet<FName> Ids;
 	int32 AttackerOnly = 0;

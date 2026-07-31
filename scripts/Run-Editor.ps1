@@ -2,12 +2,15 @@
 #
 # Usage:
 #   .\scripts\Run-Editor.ps1
+#   .\scripts\Run-Editor.ps1 -RHI Dx11          # workaround NVIDIA D3D12 crashes
 #   .\scripts\Run-Editor.ps1 -VerboseLogs
 #   .\scripts\Run-Editor.ps1 -Build
 #   .\scripts\Run-Editor.ps1 -Wait   # block until editor exits
 
 param(
     [string]$EngineRoot = "",
+    [ValidateSet("Default", "Dx11", "Dx12", "Vulkan")]
+    [string]$RHI = "Default",
     [switch]$Build,
     [switch]$VerboseLogs,
     [switch]$Wait,
@@ -29,19 +32,30 @@ $Editor = Get-SBEditorExe -EngineRoot $Engine
 $LogCmds = Get-SBDefaultLogCmds -VerboseLogs:$VerboseLogs
 
 Write-Host "Launching Editor: $UProject"
-$argList = @(
-    $UProject,
-    "-log",
-    "-LogCmds=$LogCmds"
-)
+$argList = [System.Collections.Generic.List[string]]::new()
+$argList.Add($UProject)
+$argList.Add("-log")
+$argList.Add("-LogCmds=$LogCmds")
+foreach ($dbg in (Get-SBDebugArgs -VerboseLogs:$VerboseLogs)) {
+    $argList.Add($dbg)
+}
+
+switch ($RHI) {
+    "Dx11"   { $argList.Add("-dx11"); Write-Host "RHI: DirectX 11" }
+    "Dx12"   { $argList.Add("-d3d12"); Write-Host "RHI: DirectX 12" }
+    "Vulkan" { $argList.Add("-vulkan"); Write-Host "RHI: Vulkan" }
+}
+
 if ($ExtraArgs) {
-    $argList += $ExtraArgs
+    foreach ($a in ($ExtraArgs -split '\s+' | Where-Object { $_ })) {
+        $argList.Add($a)
+    }
 }
 
 if ($Wait) {
-    & $Editor @argList
+    & $Editor @($argList.ToArray())
     exit $LASTEXITCODE
 }
 
-Start-Process -FilePath $Editor -ArgumentList $argList -WorkingDirectory $ProjectRoot | Out-Null
-Write-Host "Editor started (detached). Attach VS via .\scripts\Open-VS.ps1 then Debug → Attach to Process → UnrealEditor.exe"
+Start-Process -FilePath $Editor -ArgumentList $argList.ToArray() -WorkingDirectory $ProjectRoot | Out-Null
+Write-Host "Editor started (detached). Attach VS via .\scripts\Open-VS.ps1 then Debug -> Attach to Process -> UnrealEditor.exe"

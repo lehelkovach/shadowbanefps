@@ -47,7 +47,7 @@ if (Test-Path $ServerExe) {
 }
 else {
     $exe = Get-SBEditorExe -EngineRoot $Engine
-    Write-Host "No Binaries\Win64\ShadowbaneFPSServer.exe — launching Editor -server"
+    Write-Host "No Binaries\Win64\ShadowbaneFPSServer.exe - launching Editor -server"
     $argList += @(
         $UProject,
         "-server",

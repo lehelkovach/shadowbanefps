@@ -1,0 +1,156 @@
+[
+    {
+      "name": "Assassin",
+      "availableBaseClasses": ["Mage", "Rogue"],
+      "availableRaces": ["High Elf", "Accipitridae", "Elf", "Human", "Badawian", "Shedim", "Nightshades", "Vampire"],
+      "availableDisciplines": ["Archer", "Archmage", "Artillerist", "War Arcanist", "Blood Zealot", "Blade Weaver", "Blood Magic", "Tracker", "Riftcaller", "Enchanter", "Alukah", "Miner", "Rat Catcher", "Saboteur", "Savant", "Gravefrost", "Moroi", "Solar Fists", "Traveler", "Undead Hunter", "Wererat", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Great Swords", "Master of Staves"]
+    },
+    {
+      "name": "Barbarian",
+      "availableBaseClasses": ["Fighter", "Rogue"],
+      "availableRaces": ["High Elf", "Accipitridae", "Centaur", "Half-Giant", "Human", "Minotaur", "Shedim"],
+      "availableDisciplines": ["Berserker", "Feral Mind", "Tracker", "Commander", "Pit Fighter", "Hunter", "Miner", "Runesmith", "Saboteur", "Sapper", "Windstrider", "Stormcaller", "Summoner", "Thrall", "Traveler", "Undead Hunter", "Sky Maiden", "Werebear", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Daggers", "Master of Hammers", "Master of Polearms", "Master of Swords"]
+    },
+    {
+      "name": "Bard",
+      "availableBaseClasses": ["Fighter", "Healer", "Mage", "Rogue"],
+      "availableRaces": ["High Elf", "Accipitridae", "Elf", "Human", "Badawian", "Shedim"],
+      "availableDisciplines": ["Bonecaller", "Archer", "Archmage", "Artillerist", "War Arcanist", "Executioner", "Blade Master", "Blade Weaver", "Blood Magic", "Tracker", "Commander", "Riftcaller", "Enchanter", "Hunter", "Knight", "Miner", "Rat Catcher", "Runesmith", "Saboteur", "Windstrider", "Solar Fists", "Traveler", "Undead Hunter", "Werewolf", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Daggers", "Master of Great Swords", "Master of Throwing"]
+    },
+    {
+      "name": "Spellweaver",
+      "availableBaseClasses": ["Healer", "Mage"],
+      "availableRaces": ["High Elf", "Elf", "Human", "Badawian", "Shedim", "Nightshades"],
+      "availableDisciplines": ["Archmage", "War Arcanist", "Blade Weaver", "Blood Magic", "Commander", "Riftcaller", "Umbral Oath", "Enchanter", "Rat Catcher", "Sanctifier", "Gravefrost", "Solar Fists", "Traveler"],
+      "availableMasteryRunes": ["Master of Staves"]
+    },
+    {
+      "name": "Inquisitor",
+      "availableBaseClasses": ["Healer"],
+      "availableRaces": ["Human"],
+      "availableDisciplines": ["Bonecaller", "Commander", "Umbral Oath", "Enchanter", "Sanctifier", "Traveler", "Undead Hunter"],
+      "availableMasteryRunes": ["Master of Great Hammers", "Master of Hammers", "Master of Staves"]
+    },
+    {
+      "name": "Judicator",
+      "availableBaseClasses": ["Fighter", "Healer"],
+      "availableRaces": ["High Elf", "Centaur", "Dwarf", "Elf", "Half Giant", "Human"],
+      "availableDisciplines": ["Artillerist", "Blade Master", "Blade Weaver", "Tracker", "Commander", "Umbral Oath", "Forge Master", "Giant Killer", "Hunter", "Knight", "Miner", "Runesmith", "Sanctifier", "Sapper", "Traveler", "Undead Hunter", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Axes"]
+    },
+    {
+      "name": "Harbinger",
+      "availableBaseClasses": ["Healer", "Mage"],
+      "availableRaces": ["High Elf", "Elf", "Human", "Minotaur", "Shedim"],
+      "availableDisciplines": ["Archmage", "War Arcanist", "Blade Weaver", "Feral Mind", "Commander", "Riftcaller", "Enchanter", "Rat Catcher", "Sanctifier", "Summoner", "Thrall", "Traveler"],
+      "availableMasteryRunes": []
+    },
+    {
+      "name": "Druid",
+      "availableBaseClasses": ["Healer"],
+      "availableRaces": ["High Elf", "Centaur", "Elf", "Human"],
+      "availableDisciplines": ["Blade Weaver", "Umbral Oath", "Enchanter", "Hunter", "Rat Catcher", "Runesmith", "Sanctifier", "Summoner", "Traveler", "Undead Hunter", "Werebear", "Werewolf"],
+      "availableMasteryRunes": ["Master of Daggers", "Master of Great Hammers", "Master of Hammers", "Master of Staves"]
+    },
+    {
+      "name": "Ravager",
+      "availableBaseClasses": ["Mage"],
+      "availableRaces": ["High Elf", "Elf", "Human", "Badawian", "Shedim"],
+      "availableDisciplines": ["Bonecaller", "Archmage", "War Arcanist", "Blade Weaver", "Blood Magic", "Riftcaller", "Enchanter", "Runesmith", "Summoner", "Solar Fists", "Traveler", "Undead Hunter"],
+      "availableMasteryRunes": ["Master of Daggers", "Master of Spears", "Master of Staves"]
+    },
+    {
+      "name": "Huntress",
+      "availableBaseClasses": ["Fighter", "Rogue"],
+      "availableRaces": ["High Elf", "Accipitridae", "Centaur", "Elf", "Half Giant", "Human", "Badawian"],
+      "availableDisciplines": ["Archer", "Artillerist", "Berserker", "Executioner", "Blade Weaver", "Tracker", "Commander", "Pit Fighter", "Hunter", "Miner", "Saboteur", "Sapper", "Savant", "Summoner", "Solar Fists", "Traveler", "Undead Hunter", "Sky Maiden", "Dragonsbane"],
+      "availableMasteryRunes": []
+    },
+    {
+      "name": "Necromancer",
+      "availableBaseClasses": ["Mage"],
+      "availableRaces": ["High Elf", "Elf", "Human", "Nightshades", "Vampire"],
+      "availableDisciplines": ["Archmage", "War Arcanist", "Blood Zealot", "Blade Weaver", "Riftcaller", "Enchanter", "Alukah", "Gravefrost", "Traveler", "Dragonsbane"],
+      "availableMasteryRunes": []
+    },
+    {
+      "name": "Nightstalker",
+      "availableBaseClasses": ["Rogue"],
+      "availableRaces": ["High Elf", "Human", "Badawian"],
+      "availableDisciplines": ["Archer", "Artillerist", "Executioner", "Blade Master", "Tracker", "Hunter", "Miner", "Rat Catcher", "Saboteur", "Solar Fists", "Traveler"],
+      "availableMasteryRunes": []
+    },
+    {
+      "name": "Smite Cleric",
+      "availableBaseClasses": ["Healer"],
+      "availableRaces": ["High Elf", "Centaur", "Dwarf", "Elf", "Human"],
+      "availableDisciplines": ["Bonecaller", "Blade Weaver", "Commander", "Umbral Oath", "Enchanter", "Forge Master", "Giant Killer", "Sanctifier", "Summoner", "Traveler", "Undead Hunter"],
+      "availableMasteryRunes": ["Master of Great Hammers", "Master of Hammers", "Master of Staves"]
+    },
+    {
+      "name": "Priest",
+      "availableBaseClasses": ["Healer"],
+      "availableRaces": ["High Elf", "Accipitridae", "Centaur", "Dwarf", "Elf", "Human", "Badawian"],
+      "availableDisciplines": ["Bonecaller", "Blade Weaver", "Clanwarden", "Commander", "Umbral Oath", "Forge Master", "Giant Killer", "Sanctifier", "Savant", "Summoner", "Solar Fists", "Traveler", "Undead Hunter", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Great Hammers", "Master of Hammers", "Master of Staves"]
+    },
+    {
+      "name": "Warden",
+      "availableBaseClasses": ["Fighter", "Rogue"],
+      "availableRaces": ["High Elf", "Accipitridae", "Centaur", "Elf", "Half Giant", "Human", "Badawian", "Nightshades"],
+      "availableDisciplines": ["Archer", "Artillerist", "Berserker", "Executioner", "Blade Master", "Blade Weaver", "Tracker", "Commander", "Pit Fighter", "Hunter", "Knight", "Miner", "Rat Catcher", "Runesmith", "Saboteur", "Sapper", "Savant", "Solar Fists", "Traveler", "Undead Hunter", "Sky Maiden", "Werebear", "Wererat", "Werewolf", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Daggers", "Master of Great Axes", "Master of Great Swords", "Master of Throwing"]
+    },
+    {
+      "name": "Scout",
+      "availableBaseClasses": ["Rogue"],
+      "availableRaces": ["High Elf", "Accipitridae", "Elf", "Human", "Badawian", "Shedim", "Nightshades", "Vampire"],
+      "availableDisciplines": ["Artillerist", "Blood Zealot", "Executioner", "Blade Master", "Blade Weaver", "Tracker", "Pit Fighter", "Hunter", "Miner", "Rat Catcher", "Runesmith", "Saboteur", "Windstrider", "Solar Fists", "Moroi", "Traveler", "Undead Hunter", "Wererat"],
+      "availableMasteryRunes": ["Master of Great Swords", "Master of Staves", "Master of Swords"]
+    },
+    {
+      "name": "Guardian",
+      "availableBaseClasses": ["Fighter"],
+      "availableRaces": ["High Elf", "Centaur", "Dwarf", "Elf", "Half Giant", "Human"],
+      "availableDisciplines": ["Artillerist", "Blade Master", "Blade Weaver", "Tracker", "Commander", "Forge Master", "Giant Killer", "Hunter", "Knight", "Miner", "Runesmith", "Sapper", "Traveler", "Undead Hunter", "Dragonsbane"],
+      "availableMasteryRunes": []
+    },
+    {
+      "name": "Templar",
+      "availableBaseClasses": ["Fighter"],
+      "availableRaces": ["Half Giant", "Human"],
+      "availableDisciplines": ["Artillerist", "Blade Master", "Tracker", "Commander", "Dark Knight", "Hunter", "Miner", "Sapper", "Traveler", "Undead Hunter", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Daggers", "Master of Great Hammers", "Master of Hammers", "Master of Throwing"]
+    },
+    {
+      "name": "Thief",
+      "availableBaseClasses": ["Rogue"],
+      "availableRaces": ["High Elf", "Accipitridae", "Elf", "Human", "Badawian", "Shedim", "Nightshades", "Vampire"],
+      "availableDisciplines": ["Archer", "Artillerist", "Blood Zealot", "Blade Master", "Blade Weaver", "Tracker", "Pit Fighter", "Hunter", "Miner", "Rat Catcher", "Saboteur", "Windstrider", "Moroi", "Summoner", "Solar Fists", "Traveler", "Undead Hunter", "Wererat", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Great Swords", "Master of Staves", "Master of Swords"]
+    },
+    {
+      "name": "Warlock",
+      "availableBaseClasses": ["Fighter", "Mage"],
+      "availableRaces": ["High Elf", "Accipitridae", "Human", "Shedim", "Nightshades", "Vampire"],
+      "availableDisciplines": ["Artillerist", "War Arcanist", "Blood Zealot", "Blade Master", "Tracker", "Commander", "Riftcaller", "Blood Knight", "Enchanter", "Alukah", "Miner", "Sapper", "Savant", "Gravefrost", "Windstrider", "Summoner", "Traveler"],
+      "availableMasteryRunes": ["Master of Daggers", "Master of Great Swords"]
+    },
+    {
+      "name": "Warrior",
+      "availableBaseClasses": ["Fighter"],
+      "availableRaces": ["High Elf", "Accipitridae", "Centaur", "Dwarf", "Elf", "Half Giant", "Human", "Badawian", "Minotaur", "Shedim", "Nightshades", "Vampire"],
+      "availableDisciplines": ["Archer", "Artillerist", "Berserker", "Blade Master", "Blade Weaver", "Feral Mind", "Tracker", "Commander", "Dark Knight", "Blood Knight", "Forge Master", "Giant Killer", "Pit Fighter", "Hunter", "Knight", "Miner", "Sapper", "Windstrider", "Stormcaller", "Solar Fists", "Thrall", "Traveler", "Undead Hunter", "Sky Maiden", "Werebear", "Werewolf", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Throwing"]
+    },
+    {
+      "name": "Wizard",
+      "availableBaseClasses": ["Mage"],
+      "availableRaces": ["High Elf", "Elf", "Human", "Badawian", "Shedim", "Nightshades", "Vampire"],
+      "availableDisciplines": ["Archmage", "War Arcanist", "Blade Weaver", "Blood Zealot", "Blood Magic", "Commander", "Riftcaller", "Enchanter", "Alukah", "Gravefrost", "Solar Fists", "Traveler", "Undead Hunter", "Dragonsbane"],
+      "availableMasteryRunes": ["Master of Daggers", "Master of Staves"]
+    }
+]

@@ -8,6 +8,10 @@ public class ShadowbaneFPS : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		// Flat module layout (Core/, Characters/, …) — needed so includes like
+		// "Characters/SBCharacterArchetype.h" resolve under UE 5.5.
+		PublicIncludePaths.Add(ModuleDirectory);
+
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core",
@@ -18,14 +22,17 @@ public class ShadowbaneFPS : ModuleRules
 			"AIModule",
 			"GameplayAbilities",
 			"GameplayTags",
-			"GameplayTasks"
+			"GameplayTasks",
+			"ProceduralMeshComponent"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"NetCore",
 			"OnlineSubsystem",
-			"OnlineSubsystemUtils"
+			"OnlineSubsystemUtils",
+			"Json",
+			"JsonUtilities"
 		});
 	}
 }

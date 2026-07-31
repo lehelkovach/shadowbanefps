@@ -1,0 +1,183 @@
+﻿original_discipline,new_discipline,original_ability,new_ability,mechanic_summary,rename_status,source_url,review_notes
+Animator,Bonecaller,Craft Golem,Raise Stonebound,Summons a golem companion.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Animator,Wiki flags this discipline as DNT.
+Animator,Bonecaller,Repair Golem,Mend Construct,Restores health to the summoned construct.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Animator,
+Animator,Bonecaller,Imbue Golem,Awaken the Colossus,Temporarily improves the construct’s combat statistics.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Animator,
+Archer,Archer,Rapid Shot,Rapid Shot,Temporarily increases bow attack speed.,Kept,https://morloch.shadowbaneemulator.com/index.php/Archer,Wiki flags this ability as DNT.
+Archer,Archer,Fusillade,Fusillade,Temporarily increases crossbow attack speed.,Kept,https://morloch.shadowbaneemulator.com/index.php/Archer,Wiki flags this ability as DNT.
+Archer,Archer,Precision,Precision,Temporarily increases bow attack rating.,Kept,https://morloch.shadowbaneemulator.com/index.php/Archer,
+Archer,Archer,Thread the Needle,Thread the Needle,Temporarily increases crossbow attack rating.,Kept,https://morloch.shadowbaneemulator.com/index.php/Archer,
+Archmage,Archmage,Litany of Will,Litany of Will,"Improves intelligence, power damage, and mana recovery.",Kept,https://morloch.shadowbaneemulator.com/index.php/Archmage,
+Archmage,Archmage,Chant of Mastery,Chant of Mastery,Grants temporary immunity to power blocking.,Kept,https://morloch.shadowbaneemulator.com/index.php/Archmage,
+Archmage,Archmage,Arcane Doom,Arcane Doom,Reduces a target’s power damage and stamina recovery.,Kept,https://morloch.shadowbaneemulator.com/index.php/Archmage,
+Artillerist,Artillerist,Heavy Volley,Heavy Volley,Improves siege-engine attack and damage.,Kept,https://morloch.shadowbaneemulator.com/index.php/Artillerist,
+Artillerist,Artillerist,Engineer Ballista,Engineer Ballista,Summons a controllable ballista.,Kept,https://morloch.shadowbaneemulator.com/index.php/Artillerist,
+Artillerist,Artillerist,Field Repairs,Field Repairs,Improves siege regeneration while reducing its damage.,Kept,https://morloch.shadowbaneemulator.com/index.php/Artillerist,
+Artillerist,Artillerist,Leaden Rig,Leaden Rig,Trades physical durability for greater spell resistance on a siege engine.,Kept,https://morloch.shadowbaneemulator.com/index.php/Artillerist,
+Artillerist,Artillerist,Command Siege Engine,Command Siege Engine,Allows control of a siege engine.,Kept,https://morloch.shadowbaneemulator.com/index.php/Artillerist,
+Battle Magus,War Arcanist,Scry,War-Sight,Reveals nearby players or hidden threats.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Battle_Magus,Suggested to fit War Arcanist identity.
+Battle Magus,War Arcanist,Demolishing Spell,Siege Hex,Applies magical damage over time to structures.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Battle_Magus,
+Battle Magus,War Arcanist,Skirmish Counterspell,Battlefield Nullification,Dispels elemental and magical effects in an area.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Battle_Magus,
+Belgosch,Blood Zealot,Unnatural Fortitude,Zealot's Endurance,Improves personal toughness and damage mitigation.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Belgosch,
+Belgosch,Blood Zealot,Bloodgift,Crimson Offering,Transfers the caster’s health to an ally.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Belgosch,
+Belgosch,Blood Zealot,Crimson Feast,Blood Communion,Drains health from an enemy.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Belgosch,
+Belgosch,Blood Zealot,Summon,Call of the Bloodbound,Summons another player to the caster.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Belgosch,
+Berserker,Berserker,Unleash the Rage,Unleash the Rage,Activates an offensive rage state.,Kept,https://morloch.shadowbaneemulator.com/index.php/Berserker,
+Berserker,Berserker,Fury of the Northmen,Fury of the Northmen,Improves offensive combat performance.,Kept,https://morloch.shadowbaneemulator.com/index.php/Berserker,
+Berserker,Berserker,Strength of the Stag,Strength of the Stag,Temporarily increases strength.,Kept,https://morloch.shadowbaneemulator.com/index.php/Berserker,
+Black Mask,Executioner,Detect Hidden,Mark the Hidden,Reveals hidden characters.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Black_Mask,
+Black Mask,Executioner,Passwall,Death's Passage,Allows passage through certain walls or barriers.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Black_Mask,
+Black Mask,Executioner,Backstab,Executioner's Ambush,Delivers a powerful attack from an advantageous position.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Black_Mask,
+Black Mask,Executioner,Pellegorn,Mortal Sentence,Applies health damage over time and hinders recovery.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Black_Mask,Original name appears setting-specific.
+Black Mask,Executioner,Magusbane,Mage's Sentence,Damages mana over time and reduces mana recovery.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Black_Mask,
+Black Mask,Executioner,Buchinine,Crippling Sentence,Damages stamina over time and grounds the target.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Black_Mask,Original name appears setting-specific.
+Blade Master,Blade Master,Feint,Feint,Creates an opening by deceiving the opponent.,Kept,https://morloch.shadowbaneemulator.com/index.php/Blade_Master,
+Blade Master,Blade Master,Find Weakness,Find Weakness,Improves effectiveness against a vulnerable target.,Kept,https://morloch.shadowbaneemulator.com/index.php/Blade_Master,
+Blade Master,Blade Master,Riposte,Riposte,Counters an incoming melee attack.,Kept,https://morloch.shadowbaneemulator.com/index.php/Blade_Master,
+Blade Master,Blade Master,Whirlwind Attack,Whirlwind Attack,Strikes multiple nearby enemies.,Kept,https://morloch.shadowbaneemulator.com/index.php/Blade_Master,
+Blade Weaver,Blade Weaver,Feint,Feint,Creates an opening by deceiving the opponent.,Kept,https://morloch.shadowbaneemulator.com/index.php/Blade_Weaver,
+Blade Weaver,Blade Weaver,Find Weakness,Find Weakness,Improves effectiveness against a vulnerable target.,Kept,https://morloch.shadowbaneemulator.com/index.php/Blade_Weaver,
+Blade Weaver,Blade Weaver,Riposte,Riposte,Counters an incoming melee attack.,Kept,https://morloch.shadowbaneemulator.com/index.php/Blade_Weaver,
+Blade Weaver,Blade Weaver,Blade Dance,Blade Dance,Performs a rapid multi-target blade attack.,Kept,https://morloch.shadowbaneemulator.com/index.php/Blade_Weaver,
+Blood Horn,Feral Mind,Blood Hooves,Feral Rush,Breaks snares and grants a movement-speed burst.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Blood_Horn,Wiki flags the original ability as DNT.
+Blood Horn,Feral Mind,Blood Horns,Savage Impulse,Adds a weapon attack that causes bleeding.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Blood_Horn,
+Blood Horn,Feral Mind,Blood Roar,Primal Howl,Disrupts flight and reduces mana recovery.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Blood_Horn,
+Blood Prophet,Blood Magic,River of Life,Sanguine Renewal,Provides immediate healing followed by healing over time.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Blood_Prophet,
+Blood Prophet,Blood Magic,Bloodfire,Crimson Flame,Deals fire damage and drains stamina over time.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Blood_Prophet,
+Blood Prophet,Blood Magic,Flame Trance,Bloodflame Trance,Improves the caster’s health recovery.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Blood_Prophet,
+Blood Prophet,Blood Magic,Sooth the Flames,Quench Bloodfire,Removes fire-based effects.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Blood_Prophet,
+Blood Prophet,Blood Magic,Pass through Fire,Bloodward,Improves resistance to fire damage.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Blood_Prophet,
+Bounty Hunter,Tracker,Detect Hidden,Keen Senses,Reveals hidden characters.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Bounty_Hunter,
+Bounty Hunter,Tracker,Trip,Snaring Takedown,Knocks down or impairs an opponent’s movement.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Bounty_Hunter,
+Bounty Hunter,Tracker,Track,Mark Trail,Locates or follows a selected target.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Bounty_Hunter,
+Clanwarden,Clanwarden,Grasp of Thurin,Stonewarden Grasp,Grounds and stuns a target.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Clanwarden,Wiki flags this discipline as outdated/removed; proper name revised.
+Clanwarden,Clanwarden,Dwarvish Wrath,Dwarven Wrath,Improves the caster’s attack capability.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Clanwarden,
+Clanwarden,Clanwarden,Simeron's Song,Song of the Deep Halls,Group chant that improves power damage.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Clanwarden,Proper name revised.
+Clanwarden,Clanwarden,Shaper's Sanction,Sanction of the Forge,Reduces holy resistance.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Clanwarden,
+Commander,Commander,Rally Troops,Rally Troops,Improves allied combat readiness.,Kept,https://morloch.shadowbaneemulator.com/index.php/Commander,
+Commander,Commander,Cry Havoc,Cry Havoc,Provides an offensive group command bonus.,Kept,https://morloch.shadowbaneemulator.com/index.php/Commander,
+Commander,Commander,Take No Prisoners,Take No Prisoners,Enhances aggressive group combat.,Kept,https://morloch.shadowbaneemulator.com/index.php/Commander,
+Commander,Commander,Command Siege Engine,Command Siege Engine,Allows control of a siege engine.,Kept,https://morloch.shadowbaneemulator.com/index.php/Commander,
+Conjurer,Riftcaller,Call of the Dark Lords,Call Beyond the Rift,Summons a powerful extraplanar servant.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Conjurer,Original summoned creature name omitted in paraphrase.
+Conjurer,Riftcaller,Arcane Binding,Rift Shackles,Blocks or restricts the use of powers.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Conjurer,
+Conjurer,Riftcaller,Dark Lord's Pact,Riftborn Sacrifice,Consumes or drains a summoned servant for benefit.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Conjurer,
+Dark Knight,Dark Knight,Dark Curse,Dark Curse,Applies a debilitating dark-magic curse.,Kept,https://morloch.shadowbaneemulator.com/index.php/Dark_Knight,
+Dark Knight,Dark Knight,Knavery,Knavery,Uses deception to weaken or disrupt a target.,Kept,https://morloch.shadowbaneemulator.com/index.php/Dark_Knight,
+Dark Knight,Dark Knight,Intimidate,Intimidate,Reduces an opponent’s combat effectiveness through fear.,Kept,https://morloch.shadowbaneemulator.com/index.php/Dark_Knight,
+Darksworn,Umbral Oath,Blight of Chaos,Oathblight,Drains health through a chaotic curse.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Darksworn,
+Darksworn,Umbral Oath,Corrupt the Mind,Shadow the Mind,Reduces mana recovery.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Darksworn,
+Darksworn,Umbral Oath,Corrupt the Body,Shadow the Flesh,Reduces healing received.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Darksworn,
+Drannok,Blood Knight,Unholy Fortitude,Bloodforged Fortitude,Improves toughness and survivability.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Drannok,
+Drannok,Blood Knight,Bloodlust,Crimson War Chant,Enhances offensive combat through blood frenzy.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Drannok,
+Drannok,Blood Knight,Dread Gaze,Knight's Dread,Afflicts a target with fear or combat penalties.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Drannok,
+Drannok,Blood Knight,Shadow of Fear,Aura of the Blood Knight,Projects an area fear effect.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Drannok,
+Duelist,Duelist,Feint,Feint,Creates an opening by deceiving the opponent.,Kept,https://morloch.shadowbaneemulator.com/index.php/Duelist,Wiki flags this discipline as outdated.
+Duelist,Duelist,Find Weakness,Find Weakness,Improves effectiveness against a vulnerable target.,Kept,https://morloch.shadowbaneemulator.com/index.php/Duelist,
+Duelist,Duelist,Riposte,Riposte,Counters an incoming melee attack.,Kept,https://morloch.shadowbaneemulator.com/index.php/Duelist,
+Enchanter,Enchanter,Infuse with Power,Infuse with Power,Temporarily enchants jewelry or equipment.,Kept,https://morloch.shadowbaneemulator.com/index.php/Enchanter,Wiki flags this ability as DNT/nonfunctional.
+Forge Master,Forge Master,Lore of the Forge,Lore of the Forge,Provides specialized knowledge or bonuses related to crafted arms.,Kept,https://morloch.shadowbaneemulator.com/index.php/Forge_Master,
+Forge Master,Forge Master,Hone Weapon,Hone Weapon,Temporarily improves a weapon.,Kept,https://morloch.shadowbaneemulator.com/index.php/Forge_Master,
+Forge Master,Forge Master,Harden Armor,Harden Armor,Temporarily improves armor.,Kept,https://morloch.shadowbaneemulator.com/index.php/Forge_Master,
+Giant Killer,Giant Killer,Hamstring,Hamstring,Slows or impairs a large target.,Kept,https://morloch.shadowbaneemulator.com/index.php/Giant_Killer,
+Giant Killer,Giant Killer,Cut Down to Size,Cut Down to Size,Improves effectiveness against larger opponents.,Kept,https://morloch.shadowbaneemulator.com/index.php/Giant_Killer,
+Giant Killer,Giant Killer,Thrangdan's Lesson,Titanbreaker Drill,Provides a specialized anti-giant combat technique.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Giant_Killer,Proper name revised.
+Gladiator,Pit Fighter,Treat Wounds,Patch Up,Restores health after combat injuries.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Gladiator,
+Gladiator,Pit Fighter,Resist Pain,Pit-Hardened,Improves resistance to damage or disabling effects.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Gladiator,
+Gladiator,Pit Fighter,Call of the Crowd,Roar of the Pit,Gains combat momentum from arena-style acclaim.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Gladiator,
+Gorgoi,Alukah,Nightwings,Wings of Alukah,Grants winged movement or flight.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Gorgoi,
+Gorgoi,Alukah,The Blood is the Life,Alukah's Hunger,Uses blood consumption to restore or empower the user.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Gorgoi,
+Gorgoi,Alukah,Uncanny Fortitude,Ancient Bloodward,Improves supernatural durability.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Gorgoi,
+Gorgoi,Alukah,Crimson Pact,Bloodbound Transformation,Activates or strengthens the Alukah form.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Gorgoi,
+Huntsman,Hunter,Hunting Hound,Hunter's Hound,Summons a tracking or combat hound.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Huntsman,Wiki flags the original ability as DNT.
+Huntsman,Hunter,Track,Follow the Trail,Locates or follows a selected target.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Huntsman,
+Huntsman,Hunter,Skin the Beast,Break the Beastform,Dispels or counters beast transformation.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Huntsman,
+Knight,Knight,Strike True,Strike True,Improves accuracy or guarantees a precise attack.,Kept,https://morloch.shadowbaneemulator.com/index.php/Knight,
+Knight,Knight,Noble Inspiration,Noble Inspiration,Provides an inspirational combat bonus.,Kept,https://morloch.shadowbaneemulator.com/index.php/Knight,
+Prospector,Miner,Prospecting Stance,Surveyor's Stance,Enters a stance used to locate or assess mine resources.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Prospector,
+Prospector,Miner,Claim Mine,Stake the Claim,Claims or interacts with a mine asset.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Prospector,
+Rat Catcher,Rat Catcher,Call of the Sewers,Call of the Sewers,Summons or calls sewer-dwelling creatures.,Kept,https://morloch.shadowbaneemulator.com/index.php/Rat_Catcher,Wiki flags this ability as DNT.
+Rat Catcher,Rat Catcher,Slay Rat,Slay Rat,Specialized attack against rat creatures.,Kept,https://morloch.shadowbaneemulator.com/index.php/Rat_Catcher,Wiki flags this ability as DNT.
+Rat Catcher,Rat Catcher,Plague,Plague,Applies a disease-based harmful effect.,Kept,https://morloch.shadowbaneemulator.com/index.php/Rat_Catcher,
+Rat Catcher,Rat Catcher,Infection,Infection,Spreads a debilitating infection.,Kept,https://morloch.shadowbaneemulator.com/index.php/Rat_Catcher,
+Rune Caster,Runesmith,Nyth Rune,Rune of Renewal,Creates a rune that restores health.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Rune_Caster,Original rune word revised.
+Rune Caster,Runesmith,Beorc Rune,Rune of Elements,Creates a rune that improves elemental resistance.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Rune_Caster,Original rune word revised.
+Rune Caster,Runesmith,Eolh Rune,Rune of Warding,Creates a rune that improves magical resistance.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Rune_Caster,Original rune word revised.
+Rune Caster,Runesmith,Man Rune,Rune of Clarity,Creates a rune that improves mental resistance.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Rune_Caster,Original rune word revised.
+Rune Caster,Runesmith,Ur Rune,Rune of Might,Creates a rune that improves strength.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Rune_Caster,Original rune word revised.
+Saboteur,Saboteur,With Catlike Tread,With Catlike Tread,Improves stealthy movement.,Kept,https://morloch.shadowbaneemulator.com/index.php/Saboteur,
+Saboteur,Saboteur,Infiltrate,Infiltrate,Assists entry into defended areas.,Kept,https://morloch.shadowbaneemulator.com/index.php/Saboteur,
+Saboteur,Saboteur,Sabotage,Sabotage,Damages or disables enemy assets.,Kept,https://morloch.shadowbaneemulator.com/index.php/Saboteur,
+Saboteur,Saboteur,Foul The Works,Foul The Works,Disrupts machinery or siege operations.,Kept,https://morloch.shadowbaneemulator.com/index.php/Saboteur,
+Sanctifier,Sanctifier,Sacred Reinforcement,Sacred Reinforcement,Improves holy defenses or allied durability.,Kept,https://morloch.shadowbaneemulator.com/index.php/Sanctifier,
+Sanctifier,Sanctifier,Unwavering Faith,Unwavering Faith,Provides resistance to fear or disruption.,Kept,https://morloch.shadowbaneemulator.com/index.php/Sanctifier,
+Sanctifier,Sanctifier,Sanctify the Fallen,Sanctify the Fallen,Applies a holy effect to fallen or undead targets.,Kept,https://morloch.shadowbaneemulator.com/index.php/Sanctifier,
+Sapper,Sapper,Undermine Foundations,Undermine Foundations,Weakens a structure’s defenses.,Kept,https://morloch.shadowbaneemulator.com/index.php/Sapper,
+Sapper,Sapper,Open a Gap,Open a Gap,Creates a breach in fortified defenses.,Kept,https://morloch.shadowbaneemulator.com/index.php/Sapper,
+Sapper,Sapper,Point The Way In,Point The Way In,Improves allied attacks against a marked structure.,Kept,https://morloch.shadowbaneemulator.com/index.php/Sapper,
+Sapper,Sapper,Balefume,Balefume,Releases a harmful area cloud or siege effect.,Kept,https://morloch.shadowbaneemulator.com/index.php/Sapper,
+Savant,Savant,The Stare,The Stare,Applies a focused mental or psychic debuff.,Kept,https://morloch.shadowbaneemulator.com/index.php/Savant,
+Savant,Savant,Litany of Serenity,Litany of Serenity,Improves mental calm and resistance.,Kept,https://morloch.shadowbaneemulator.com/index.php/Savant,
+Savant,Savant,Embrace of the Overmind,Embrace of the Overmind,Grants a powerful group-linked mental enhancement.,Kept,https://morloch.shadowbaneemulator.com/index.php/Savant,
+Savant,Savant,Strength of the Many,Strength of the Many,Scales power through nearby allies or collective force.,Kept,https://morloch.shadowbaneemulator.com/index.php/Savant,
+Shroudborne,Gravefrost,Oblivion's Caress,Gravefrost's Embrace,Provides healing followed by healing over time.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Shroudborne,
+Shroudborne,Gravefrost,Chill of the Grave,Tombfrost,Deals cold damage and drains mana over time.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Shroudborne,
+Shroudborne,Gravefrost,Ardan's Shroud,Winter's Shroud,Reduces cold resistance.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Shroudborne,Proper name revised.
+Shroudborne,Gravefrost,The Ebon Binding,Ebon Thaw,Removes cold-based effects.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Shroudborne,
+Skydancer,Windstrider,Will of the Sky Dancer,Windstrider's Resolve,Provides a defensive or mobility-focused self enhancement.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Skydancer,
+Skydancer,Windstrider,Talon Dance,Talon Rush,Performs an agile offensive strike.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Skydancer,
+Skydancer,Windstrider,Dance of the Updrafts,Ride the Updraft,Uses rising air for enhanced movement or evasion.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Skydancer,
+Storm Lord,Stormcaller,Thunder Strike,Thunderclap,Delivers lightning or thunder damage.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Storm_Lord,
+Storm Lord,Stormcaller,Call Storm,Summon Tempest,Creates a storm-based area effect.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Storm_Lord,
+Storm Lord,Stormcaller,Defy the Sky's Fury,Stormward,Improves resistance to storm or lightning damage.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Storm_Lord,
+Strigoi,Moroi,A Taste for Dead Flesh,Grave Scent,Detects or gains benefit from dead flesh.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Strigoi,
+Strigoi,Moroi,Passwall,Moroi Passage,Allows passage through certain walls or barriers.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Strigoi,
+Strigoi,Moroi,Feral Fury,Hunger Unbound,Activates an aggressive feral state.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Strigoi,
+Strigoi,Moroi,Undead Fortitude,Deathless Hide,Improves undead durability.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Strigoi,
+Summoner,Summoner,Strengthen Beast,Strengthen Beast,Improves a summoned creature’s combat ability.,Kept,https://morloch.shadowbaneemulator.com/index.php/Summoner,Wiki flags this discipline as DNT.
+Summoner,Summoner,Summon Phoenix,Summon Phoenix,Summons a phoenix.,Kept,https://morloch.shadowbaneemulator.com/index.php/Summoner,
+Summoner,Summoner,Summon Genie,Summon Genie,Summons a genie.,Kept,https://morloch.shadowbaneemulator.com/index.php/Summoner,
+Summoner,Summoner,Summon Efreet,Summon Efreet,Summons an efreet.,Kept,https://morloch.shadowbaneemulator.com/index.php/Summoner,
+Sun Dancer,Solar Fists,Strike of the Manticore,Solar Flurry,Performs a rapid offensive strike.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Sun_Dancer,Wiki flags the original ability as DNT.
+Sun Dancer,Solar Fists,Embrace of the Phoenix,Phoenix Guard,Provides a fiery defensive or restorative effect.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Sun_Dancer,
+Thrall,Thrall,Vok-Maalra,Bloodbound Transfer,Transfers vitality or power through a bonded effect.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Thrall,Original setting-language name revised.
+Thrall,Thrall,Thog-Maalra,Chainbreaker Cry,Breaks or resists control through a bonded battle cry.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Thrall,Original setting-language name revised.
+Thrall,Thrall,Thrall's Onslaught,Bonded Onslaught,Improves aggressive combat performance.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Thrall,
+Thrall,Thrall,Thrall's Battery,Bonded Battery,Provides stored or transferred magical power.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Thrall,
+Traveler,Traveler,Open Fire Gate,Open Flame Waygate,Opens a travel gate aligned with fire.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Traveler,Runegate terminology standardized to Waygate.
+Traveler,Traveler,Open Water Gate,Open Tide Waygate,Opens a travel gate aligned with water.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Traveler,
+Traveler,Traveler,Open Earth Gate,Open Stone Waygate,Opens a travel gate aligned with earth.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Traveler,
+Traveler,Traveler,Open Air Gate,Open Gale Waygate,Opens a travel gate aligned with air.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Traveler,
+Traveler,Traveler,Open Spirit Gate,Open Spirit Waygate,Opens a travel gate aligned with spirit.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Traveler,
+Traveler,Traveler,Recall to Runegate,Recall to Waygate,Returns the caster to a bound travel gate.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Traveler,
+Traveler,Traveler,Send to Runegate,Send to Waygate,Sends a target to a bound travel gate.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Traveler,
+Traveler,Traveler,Recall Group to Runegate,Group Recall to Waygate,Returns a group to a bound travel gate.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Traveler,
+Undead Hunter,Undead Hunter,Consecrate Weapon,Consecrate Weapon,Imbues a weapon for use against undead.,Kept,https://morloch.shadowbaneemulator.com/index.php/Undead_Hunter,
+Undead Hunter,Undead Hunter,Cure Death's Touch,Cure Death's Touch,Removes an undead or death-based affliction.,Kept,https://morloch.shadowbaneemulator.com/index.php/Undead_Hunter,
+Undead Hunter,Undead Hunter,Unholy Ward,Unholy Ward,Improves defense against unholy effects.,Kept,https://morloch.shadowbaneemulator.com/index.php/Undead_Hunter,
+Undead Hunter,Undead Hunter,Endure the Darkness,Endure the Darkness,Improves resistance to dark or undead powers.,Kept,https://morloch.shadowbaneemulator.com/index.php/Undead_Hunter,
+Undead Hunter,Undead Hunter,Hunt the Dead,Hunt the Dead,Improves tracking or combat effectiveness against undead.,Kept,https://morloch.shadowbaneemulator.com/index.php/Undead_Hunter,
+Valkyr,Sky Maiden,Lashava's Frenzy,Sky Maiden's Fury,Activates a rapid offensive frenzy.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Valkyr,Wiki flags the original ability as DNT; proper name revised.
+Valkyr,Sky Maiden,Signy's Eye,Skyward Sight,Improves perception or targeting.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Valkyr,Proper name revised.
+Werebear,Werebear,Bear Shape,Bear Shape,Transforms the user into a bear.,Kept,https://morloch.shadowbaneemulator.com/index.php/Werebear,
+Werebear,Werebear,Hochbaar Shape,Greatbear Shape,Transforms the user into a stronger bear form.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Werebear,Original setting term revised.
+Werebear,Werebear,G'harron's Roar,Elder Bear's Roar,Unleashes an intimidating roar.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Werebear,Proper name revised.
+Werebear,Werebear,Bear Hibernation,Bear Hibernation,Greatly improves recovery while resting.,Kept,https://morloch.shadowbaneemulator.com/index.php/Werebear,
+Werebear,Werebear,G'harron's Claws,Elder Bear's Claws,Enhances claw attacks.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Werebear,Proper name revised.
+Werebear,Werebear,Bear-Lord's Might,Bearlord's Might,Improves strength and physical power.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Werebear,Stylistic standardization.
+Werebear,Werebear,Overbearing Strike,Overbearing Strike,Delivers a heavy bear-form attack.,Kept,https://morloch.shadowbaneemulator.com/index.php/Werebear,
+Wererat,Wererat,Rat Shape,Rat Shape,Transforms the user into a rat-like form.,Kept,https://morloch.shadowbaneemulator.com/index.php/Wererat,
+Wererat,Wererat,Skree'ekt Shape,Dire Rat Shape,Transforms the user into a stronger rat form.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Wererat,Original setting term revised.
+Wererat,Wererat,Plague Jaws,Plague Jaws,Adds disease to bite attacks.,Kept,https://morloch.shadowbaneemulator.com/index.php/Wererat,
+Wererat,Wererat,Teeth of the Swarm,Teeth of the Swarm,Enhances rapid bite attacks.,Kept,https://morloch.shadowbaneemulator.com/index.php/Wererat,
+Wererat,Wererat,Skree'ekt's Teeth,Dire Rat's Teeth,Enhances attacks in the stronger rat form.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Wererat,Original setting term revised.
+Wererat,Wererat,Gnaw,Gnaw,Performs a sustained biting attack.,Kept,https://morloch.shadowbaneemulator.com/index.php/Wererat,
+Wererat,Wererat,Rat-Lord's Guile,Ratlord's Guile,"Improves cunning, evasion, or stealth.",Renamed,https://morloch.shadowbaneemulator.com/index.php/Wererat,Stylistic standardization.
+Werewolf,Werewolf,Wolf Shape,Wolf Shape,Transforms the user into a wolf.,Kept,https://morloch.shadowbaneemulator.com/index.php/Werewolf,
+Werewolf,Werewolf,Vargr Shape,Direwolf Shape,Transforms the user into a stronger wolf form.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Werewolf,Original setting term revised.
+Werewolf,Werewolf,Might of the Wolfpack,Might of the Wolfpack,Improves combat through pack strength.,Kept,https://morloch.shadowbaneemulator.com/index.php/Werewolf,
+Werewolf,Werewolf,Rend the Throat,Rend the Throat,Performs a severe bleeding bite or claw attack.,Kept,https://morloch.shadowbaneemulator.com/index.php/Werewolf,
+Werewolf,Werewolf,Vargr's Fangs,Direwolf's Fangs,Enhances attacks in the stronger wolf form.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Werewolf,Original setting term revised.
+Werewolf,Werewolf,Dread Howl,Dread Howl,Applies fear through a powerful howl.,Kept,https://morloch.shadowbaneemulator.com/index.php/Werewolf,
+Werewolf,Werewolf,Wolf-Lord's Cunning,Wolflord's Cunning,"Improves cunning, accuracy, or evasion.",Renamed,https://morloch.shadowbaneemulator.com/index.php/Werewolf,Stylistic standardization.
+Wyrmslayer,Dragonsbane,Drakesbane,Dragonsbane Strike,Specialized attack against drakes or dragons.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Wyrmslayer,
+Wyrmslayer,Dragonsbane,Strike of the Manticore,Scale-Piercing Rush,Performs a rapid attack suited to armored beasts.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Wyrmslayer,
+Wyrmslayer,Dragonsbane,Flame Ward,Dragonfire Ward,Improves resistance to fire.,Renamed,https://morloch.shadowbaneemulator.com/index.php/Wyrmslayer,

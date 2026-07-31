@@ -1,4 +1,4 @@
-# Simple DEV workflow — cook + hot deploy to OCI
+# Simple DEV workflow - cook + hot deploy to OCI
 #
 # Recommended branch model (2 people, keep it dumb):
 #   - `dev`   → continuous playtest server (auto/manual deploy target)
@@ -67,13 +67,13 @@ if (-not $SkipGit) {
             git checkout $DevBranch
             git pull origin $DevBranch
         } else {
-            Write-Host "Remote branch '$DevBranch' not found yet — creating from current HEAD."
+            Write-Host "Remote branch '$DevBranch' not found yet - creating from current HEAD."
             git checkout -B $DevBranch
         }
     } else {
         git pull origin $DevBranch 2>$null
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Pull skipped/failed (new branch or no upstream yet) — continuing."
+            Write-Host "Pull skipped/failed (new branch or no upstream yet) - continuing."
         }
     }
 
@@ -98,7 +98,7 @@ if (-not $SkipCook) {
 }
 
 if (-not (Test-Path $LinuxServer)) {
-    throw "Missing $LinuxServer — cook first or drop a package there"
+    throw "Missing $LinuxServer - cook first or drop a package there"
 }
 
 # --- Deploy via SSH (not OCI API) ---
@@ -112,7 +112,7 @@ if (-not $identity) {
     Write-Host @"
 
 No SSH private key found for deploy.
-Gracen does not need OCI admin — only an SSH key the VM already trusts.
+Gracen does not need OCI admin - only an SSH key the VM already trusts.
 
 Ask Lehel to:
   1) Generate a deploy keypair (or add your Windows .pub to the VM)

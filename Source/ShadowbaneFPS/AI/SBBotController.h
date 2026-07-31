@@ -68,6 +68,11 @@ protected:
 	void Think();
 	void SteerToward(const FVector& WorldTarget, float DeltaSeconds);
 	void SteerAwayFrom(const FVector& WorldThreat, float DeltaSeconds);
+	FVector ClampToPlayableBounds(const FVector& Desired) const;
+	void SoftClampPawnToBounds();
 	void TryFire();
 	ASBCharacter* GetSBCharacter() const;
+
+	/** Playable XY box matching Broken Citadel greybox pads (+ margin). */
+	FBox PlayableBounds = FBox(FVector(-6200.f, -2600.f, -200.f), FVector(4200.f, 2600.f, 800.f));
 };
