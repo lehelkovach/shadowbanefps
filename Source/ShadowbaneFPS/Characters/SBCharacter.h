@@ -14,6 +14,7 @@ class ASBPlayerState;
 class UInputMappingContext;
 class UInputAction;
 class UProceduralMeshComponent;
+class USkeletalMeshComponent;
 class UAnimMontage;
 class UAnimSequence;
 
@@ -162,6 +163,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh|Melee")
 	TObjectPtr<UStaticMeshComponent> TpAxeBladeMesh;
+
+	/** Imported free sword (skeletal). Preferred over static axe when loaded. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh|Melee")
+	TObjectPtr<USkeletalMeshComponent> TpSwordMesh;
 
 	/** Crescent battle-axe procedural mesh (replaces cube mallet). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh|Melee")

@@ -161,11 +161,34 @@ ASBCharacter::ASBCharacter()
 	TpAxeBladeMesh->SetRelativeScale3D(FVector(0.7f, 0.1f, 0.42f));
 	TpAxeBladeMesh->SetHiddenInGame(true);
 
+	TpSwordMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TpSwordMesh"));
+	TpSwordMesh->SetupAttachment(TpWeaponPivot);
+	TpSwordMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	TpSwordMesh->SetCastShadow(true);
+	TpSwordMesh->SetHiddenInGame(true);
+	TpSwordMesh->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
+	TpSwordMesh->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
+	TpSwordMesh->SetRelativeScale3D(FVector(1.f));
+
 	TpBattleAxe = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("TpBattleAxe"));
 	TpBattleAxe->SetupAttachment(TpWeaponPivot);
 	TpBattleAxe->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	TpBattleAxe->SetCastShadow(true);
 	TpBattleAxe->SetHiddenInGame(true);
+
+	// Prefer free sword (skeletal); axe static meshes remain as fallback.
+	static ConstructorHelpers::FObjectFinder<USkeletalMesh> FreeSwordMesh(
+		TEXT("/Game/Art/Weapons/SwordLODS.SwordLODS"));
+	if (FreeSwordMesh.Succeeded())
+	{
+		TpSwordMesh->SetSkeletalMesh(FreeSwordMesh.Object);
+		static ConstructorHelpers::FObjectFinder<UMaterialInterface> FreeSwordMat(
+			TEXT("/Game/Art/Weapons/Sword.Sword"));
+		if (FreeSwordMat.Succeeded())
+		{
+			TpSwordMesh->SetMaterial(0, FreeSwordMat.Object);
+		}
+	}
 
 	// Prefer imported battle-axe mesh, then Kenney handaxe — never cube/procedural when available.
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> BattleAxeMesh(
@@ -507,7 +530,7 @@ void ASBCharacter::Tick(float DeltaSeconds)
 		RuneDisc->SetRelativeScale3D(FVector(Pulse, Pulse, 0.08f));
 	}
 
-	if (WeaponMesh || TpWeaponMesh)
+	if (WeaponMesh || TpWeaponMesh || TpSwordMesh)
 	{
 		TickMeleeSwingVisual(DeltaSeconds);
 	}
@@ -1692,7 +1715,8 @@ void ASBCharacter::MulticastRecallEvent_Implementation(bool bStarted, bool bComp
 void ASBCharacter::UpdateWeaponVisibility()
 {
 	const bool bShowMelee = bUsesMelee && !bBowEquipped;
-	const bool bHasImportedAxe = TpWeaponMesh && TpWeaponMesh->GetStaticMesh()
+	const bool bHasSword = TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset() != nullptr;
+	const bool bHasImportedAxe = !bHasSword && TpWeaponMesh && TpWeaponMesh->GetStaticMesh()
 		&& !TpWeaponMesh->GetStaticMesh()->GetPathName().Contains(TEXT("BasicShapes"));
 
 	if (WeaponMesh && AxeBladeMesh)
@@ -1703,18 +1727,28 @@ void ASBCharacter::UpdateWeaponVisibility()
 		AxeBladeMesh->SetHiddenInGame(true);
 	}
 
+	if (TpSwordMesh)
+	{
+		const bool bShowSword = bShowMelee && bHasSword;
+		TpSwordMesh->SetOwnerNoSee(false);
+		TpSwordMesh->SetHiddenInGame(!bShowSword);
+		TpSwordMesh->SetVisibility(bShowSword, true);
+		TpSwordMesh->SetCastShadow(true);
+	}
+
 	if (TpWeaponMesh)
 	{
+		const bool bShowAxe = bShowMelee && !bHasSword;
 		TpWeaponMesh->SetOwnerNoSee(false);
-		TpWeaponMesh->SetHiddenInGame(!bShowMelee);
-		TpWeaponMesh->SetVisibility(bShowMelee, true);
+		TpWeaponMesh->SetHiddenInGame(!bShowAxe);
+		TpWeaponMesh->SetVisibility(bShowAxe, true);
 		TpWeaponMesh->SetCastShadow(true);
 	}
 
-	// Hide cube blade / procedural when a real axe mesh is loaded.
+	// Hide cube blade / procedural when a real axe mesh is loaded (or sword preferred).
 	if (TpAxeBladeMesh)
 	{
-		const bool bShowBlade = bShowMelee && !bHasImportedAxe;
+		const bool bShowBlade = bShowMelee && !bHasSword && !bHasImportedAxe;
 		TpAxeBladeMesh->SetHiddenInGame(!bShowBlade);
 		TpAxeBladeMesh->SetVisibility(bShowBlade, true);
 	}
@@ -1770,7 +1804,17 @@ void ASBCharacter::EnsureWeaponInHand()
 		TpWeaponPivot->SetRelativeRotation(FRotator(-20.f, 0.f, 15.f));
 	}
 
-	if (TpWeaponMesh)
+	const bool bHasSword = TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset() != nullptr;
+	if (bHasSword)
+	{
+		// SwordLODS: grip near mesh origin; blade often along local +Y after FBX import.
+		// Pitch/roll offsets vs axe — tune in PIE if tip/guard look wrong.
+		TpSwordMesh->SetRelativeLocation(FVector(-1.f, 4.f, 1.f));
+		TpSwordMesh->SetRelativeRotation(FRotator(-90.f, 0.f, 90.f));
+		TpSwordMesh->SetRelativeScale3D(FVector(1.f));
+		TpSwordMesh->SetCastShadow(true);
+	}
+	else if (TpWeaponMesh)
 	{
 		UStaticMesh* WeaponStatic = TpWeaponMesh->GetStaticMesh();
 		const FString Path = WeaponStatic ? WeaponStatic->GetPathName() : FString();
