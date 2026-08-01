@@ -17,6 +17,14 @@ enum class ESBTeam : uint8
 	Defenders	UMETA(DisplayName = "Defenders")
 };
 
+/** Match ruleset. Siege = 5v5 conquest; FreeForAll = open dogfood deathmatch. */
+UENUM(BlueprintType)
+enum class ESBMatchMode : uint8
+{
+	Siege		UMETA(DisplayName = "Siege"),
+	FreeForAll	UMETA(DisplayName = "Free For All")
+};
+
 /** High-level match phases used for pacing / telemetry. See design doc §8. */
 UENUM(BlueprintType)
 enum class ESBMatchPhase : uint8

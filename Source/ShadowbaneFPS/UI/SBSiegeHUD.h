@@ -37,6 +37,7 @@ private:
 	void DrawAbilityRunes();
 	void DrawConnectionPanel(float& Y);
 	void DrawDamageFloaters(float DeltaSeconds);
+	void DrawWorldNametags();
 
 	/** One-shot client log so HUD readiness shows up without spam. */
 	bool bLoggedHudReady = false;

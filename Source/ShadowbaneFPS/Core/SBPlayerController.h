@@ -43,10 +43,26 @@ public:
 	bool IsCreationBuilderOpen() const { return bCreationBuilderOpen; }
 
 	UFUNCTION(BlueprintPure, Category = "Siege|Builder")
-	FSBCharacterBuildState GetCreationBuild() const { return CreationBuild; }
+	FSBCharacterBuildState GetCreationBuild() const;
 
 	UFUNCTION(Server, Reliable)
-	void ServerConfirmCreationBuild(const FString& Race, const FString& BaseClass, const FString& Prestige, const FString& Discipline);
+	void ServerConfirmCreationBuild(const FString& Race, const FString& BaseClass, const FString& Prestige, const FString& Discipline, const FString& HeroName);
+
+	/** Sets hero display name (replicates via PlayerState::SetPlayerName). */
+	UFUNCTION(Server, Reliable)
+	void ServerSetHeroName(const FString& HeroName);
+
+	/** Local draft name shown in the creation builder. */
+	UFUNCTION(BlueprintPure, Category = "Siege|Builder")
+	FString GetCreationHeroName() const { return CreationHeroName; }
+
+	UFUNCTION(BlueprintPure, Category = "Siege|Builder")
+	bool IsHeroNameEditing() const { return bHeroNameEditing; }
+
+	void SetCreationHeroName(const FString& InName);
+
+	/** Type into hero name while builder is open (N toggles edit). */
+	virtual bool InputKey(const FInputKeyParams& Params) override;
 
 	/** Admin free-cam spectate for bot-populated playtests. */
 	UFUNCTION(BlueprintCallable, Category = "Siege|Admin")
@@ -67,6 +83,10 @@ public:
 	/** Console: AdminSpectate */
 	UFUNCTION(Exec)
 	void AdminSpectate();
+
+	/** Console: SBName MyHero — set display name (and builder draft). */
+	UFUNCTION(Exec)
+	void SBName(const FString& NewName);
 
 	/** Console: SBDebugMsg "text" — push an on-screen upper-left message. */
 	UFUNCTION(Exec)
@@ -120,8 +140,12 @@ private:
 	void BuilderCycleDisciplineNext();
 	void BuilderCycleDisciplinePrev();
 	void BuilderConfirm();
+	void BuilderToggleNameEdit();
 	void EnsureCreationBuildInitialized();
+	static FString SanitizeHeroName(const FString& InName);
 
 	bool bCreationBuilderOpen = false;
+	bool bHeroNameEditing = false;
 	FSBCharacterBuildState CreationBuild;
+	FString CreationHeroName;
 };

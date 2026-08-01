@@ -38,6 +38,7 @@ void ASBSiegeGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(ASBSiegeGameState, Phase);
 	DOREPLIFETIME(ASBSiegeGameState, ConquestStage);
 	DOREPLIFETIME(ASBSiegeGameState, Result);
+	DOREPLIFETIME(ASBSiegeGameState, MatchMode);
 	DOREPLIFETIME(ASBSiegeGameState, FinalObjectiveProgress);
 	DOREPLIFETIME(ASBSiegeGameState, RegulationDeadlineServerTime);
 }

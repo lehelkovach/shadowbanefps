@@ -17,6 +17,8 @@ void ASBPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ASBPlayerState, Team);
 	DOREPLIFETIME(ASBPlayerState, SelectedArchetypeId);
 	DOREPLIFETIME(ASBPlayerState, bAlive);
+	DOREPLIFETIME(ASBPlayerState, KillCount);
+	DOREPLIFETIME(ASBPlayerState, DeathCount);
 	DOREPLIFETIME(ASBPlayerState, bHasCreationVitals);
 	DOREPLIFETIME(ASBPlayerState, CreationVitals);
 	DOREPLIFETIME(ASBPlayerState, CreationRace);
@@ -31,6 +33,22 @@ void ASBPlayerState::SetTeam(ESBTeam NewTeam)
 	{
 		Team = NewTeam;
 		OnRep_Team();
+	}
+}
+
+void ASBPlayerState::AddKill()
+{
+	if (HasAuthority())
+	{
+		++KillCount;
+	}
+}
+
+void ASBPlayerState::AddDeath()
+{
+	if (HasAuthority())
+	{
+		++DeathCount;
 	}
 }
 

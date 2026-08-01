@@ -13,6 +13,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "InputCoreTypes.h"
+#include "GameFramework/PlayerInput.h"
 
 ASBPlayerController::ASBPlayerController()
 {
@@ -151,6 +153,93 @@ void ASBPlayerController::SetupInputComponent()
 	InputComponent->BindAction(TEXT("BuilderDisciplineNext"), IE_Pressed, this, &ASBPlayerController::BuilderCycleDisciplineNext);
 	InputComponent->BindAction(TEXT("BuilderDisciplinePrev"), IE_Pressed, this, &ASBPlayerController::BuilderCycleDisciplinePrev);
 	InputComponent->BindAction(TEXT("BuilderConfirm"), IE_Pressed, this, &ASBPlayerController::BuilderConfirm);
+}
+
+FSBCharacterBuildState ASBPlayerController::GetCreationBuild() const
+{
+	FSBCharacterBuildState Out = CreationBuild;
+	Out.HeroName = CreationHeroName;
+	return Out;
+}
+
+FString ASBPlayerController::SanitizeHeroName(const FString& InName)
+{
+	FString Clean;
+	Clean.Reserve(InName.Len());
+	for (const TCHAR Ch : InName)
+	{
+		if (FChar::IsAlnum(Ch) || Ch == TEXT('_') || Ch == TEXT('-') || Ch == TEXT(' '))
+		{
+			Clean.AppendChar(Ch);
+		}
+	}
+	Clean = Clean.TrimStartAndEnd();
+	if (Clean.IsEmpty())
+	{
+		Clean = TEXT("Hero");
+	}
+	if (Clean.Len() > 24)
+	{
+		Clean = Clean.Left(24);
+	}
+	return Clean;
+}
+
+bool ASBPlayerController::InputKey(const FInputKeyParams& Params)
+{
+	if (bCreationBuilderOpen && Params.Event == IE_Pressed && IsLocalController())
+	{
+		const FKey Key = Params.Key;
+
+		if (!bHeroNameEditing && Key == EKeys::N)
+		{
+			BuilderToggleNameEdit();
+			return true;
+		}
+
+		if (bHeroNameEditing)
+		{
+			if (Key == EKeys::Escape || Key == EKeys::Enter)
+			{
+				bHeroNameEditing = false;
+				SetCreationHeroName(CreationHeroName);
+				ServerSetHeroName(CreationHeroName);
+				FSBClientDebug::PushMessage(FString::Printf(TEXT("Name locked: %s"), *CreationHeroName), 3.f);
+				return true;
+			}
+			if (Key == EKeys::BackSpace)
+			{
+				if (CreationHeroName.Len() > 0)
+				{
+					CreationHeroName.LeftChopInline(1);
+				}
+				return true;
+			}
+
+			const FString KeyName = Key.GetDisplayName().ToString();
+			if (KeyName.Len() == 1)
+			{
+				const TCHAR Ch = KeyName[0];
+				if (FChar::IsAlnum(Ch) || Ch == TEXT('_') || Ch == TEXT('-'))
+				{
+					if (CreationHeroName.Len() < 24)
+					{
+						CreationHeroName.AppendChar(Ch);
+					}
+					return true;
+				}
+			}
+			if (Key == EKeys::SpaceBar && CreationHeroName.Len() < 24)
+			{
+				CreationHeroName.AppendChar(TEXT(' '));
+				return true;
+			}
+			// Swallow other keys while editing so builder cycle binds don't fire.
+			return true;
+		}
+	}
+
+	return Super::InputKey(Params);
 }
 
 void ASBPlayerController::PlayerTick(float DeltaTime)
@@ -301,6 +390,7 @@ void ASBPlayerController::EnsureCreationBuildInitialized()
 		CreationBuild.BaseClass = TEXT("Fighter");
 		CreationBuild.Prestige = TEXT("Warrior");
 	}
+	CreationBuild.HeroName = CreationHeroName;
 	USBCharacterCalculator::Recalculate(CreationBuild);
 }
 
@@ -317,12 +407,66 @@ void ASBPlayerController::ToggleCreationBuilder()
 	if (bCreationBuilderOpen)
 	{
 		EnsureCreationBuildInitialized();
-		FSBClientDebug::PushMessage(TEXT("Builder ON: [ ] race  , . path  - = prestige  Enter apply"), 5.f);
+		if (CreationHeroName.IsEmpty() && PS)
+		{
+			CreationHeroName = PS->GetPlayerName();
+		}
+		if (CreationHeroName.IsEmpty())
+		{
+			CreationHeroName = TEXT("Hero");
+		}
+		bHeroNameEditing = false;
+		FSBClientDebug::PushMessage(TEXT("Builder ON: N name  [ ] race  , . path  - = prestige  Enter apply"), 5.f);
 	}
 	else
 	{
+		bHeroNameEditing = false;
 		FSBClientDebug::PushMessage(TEXT("Creation builder OFF"), 2.f);
 	}
+}
+
+void ASBPlayerController::BuilderToggleNameEdit()
+{
+	if (!bCreationBuilderOpen)
+	{
+		return;
+	}
+	bHeroNameEditing = !bHeroNameEditing;
+	if (bHeroNameEditing)
+	{
+		FSBClientDebug::PushMessage(TEXT("Type hero name (Backspace / Enter to lock)"), 4.f);
+	}
+	else
+	{
+		SetCreationHeroName(CreationHeroName);
+		ServerSetHeroName(CreationHeroName);
+		FSBClientDebug::PushMessage(FString::Printf(TEXT("Name locked: %s"), *CreationHeroName), 3.f);
+	}
+}
+
+void ASBPlayerController::SetCreationHeroName(const FString& InName)
+{
+	CreationHeroName = SanitizeHeroName(InName);
+	CreationBuild.HeroName = CreationHeroName;
+}
+
+void ASBPlayerController::SBName(const FString& NewName)
+{
+	SetCreationHeroName(NewName);
+	ServerSetHeroName(CreationHeroName);
+	FSBClientDebug::PushMessage(FString::Printf(TEXT("Hero name -> %s"), *CreationHeroName), 4.f);
+}
+
+void ASBPlayerController::ServerSetHeroName_Implementation(const FString& HeroName)
+{
+	ASBPlayerState* PS = GetPlayerState<ASBPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+	const FString Clean = SanitizeHeroName(HeroName);
+	PS->SetPlayerName(Clean);
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Hero name set: %s"), *Clean);
 }
 
 void ASBPlayerController::BuilderCycleRaceNext()
@@ -384,17 +528,43 @@ void ASBPlayerController::BuilderCycleDisciplinePrev()
 void ASBPlayerController::BuilderConfirm()
 {
 	if (!bCreationBuilderOpen) { return; }
+	if (bHeroNameEditing)
+	{
+		bHeroNameEditing = false;
+		SetCreationHeroName(CreationHeroName);
+		ServerSetHeroName(CreationHeroName);
+		FSBClientDebug::PushMessage(FString::Printf(TEXT("Name locked: %s"), *CreationHeroName), 3.f);
+		return;
+	}
 	EnsureCreationBuildInitialized();
 	if (!CreationBuild.bValid)
 	{
 		FSBClientDebug::PushMessage(TEXT("Invalid shadowbanefps build"), 3.f);
 		return;
 	}
-	ServerConfirmCreationBuild(CreationBuild.Race, CreationBuild.BaseClass, CreationBuild.Prestige, CreationBuild.Discipline);
-	FSBClientDebug::PushMessage(FString::Printf(TEXT("Confirmed %s"), *CreationBuild.StatusLine), 4.f);
+	if (CreationHeroName.IsEmpty())
+	{
+		if (const ASBPlayerState* PS = GetPlayerState<ASBPlayerState>())
+		{
+			CreationHeroName = PS->GetPlayerName();
+		}
+	}
+	CreationHeroName = SanitizeHeroName(CreationHeroName);
+	ServerConfirmCreationBuild(
+		CreationBuild.Race,
+		CreationBuild.BaseClass,
+		CreationBuild.Prestige,
+		CreationBuild.Discipline,
+		CreationHeroName);
+	FSBClientDebug::PushMessage(FString::Printf(TEXT("Confirmed %s as %s"), *CreationHeroName, *CreationBuild.StatusLine), 4.f);
 }
 
-void ASBPlayerController::ServerConfirmCreationBuild_Implementation(const FString& Race, const FString& BaseClass, const FString& Prestige, const FString& Discipline)
+void ASBPlayerController::ServerConfirmCreationBuild_Implementation(
+	const FString& Race,
+	const FString& BaseClass,
+	const FString& Prestige,
+	const FString& Discipline,
+	const FString& HeroName)
 {
 	ASBSiegeGameMode* GM = GetWorld() ? GetWorld()->GetAuthGameMode<ASBSiegeGameMode>() : nullptr;
 	ASBPlayerState* PS = GetPlayerState<ASBPlayerState>();
@@ -408,7 +578,11 @@ void ASBPlayerController::ServerConfirmCreationBuild_Implementation(const FStrin
 		return;
 	}
 
+	const FString CleanName = SanitizeHeroName(HeroName);
+	PS->SetPlayerName(CleanName);
+
 	FSBCharacterBuildState Build;
+	Build.HeroName = CleanName;
 	Build.Race = Race;
 	Build.BaseClass = BaseClass;
 	Build.Prestige = Prestige;
@@ -431,7 +605,7 @@ void ASBPlayerController::ServerConfirmCreationBuild_Implementation(const FStrin
 
 	PS->SetCreationVitalsOverlay(Build.Vitals, Build.Race, Build.BaseClass, Build.Prestige, Build.Discipline);
 	GM->RequestSelectArchetype(PS, Match);
-	UE_LOG(LogShadowbaneServer, Log, TEXT("Creation build confirmed: %s -> roster %s"),
-		*Build.StatusLine, *Match->ArchetypeId.ToString());
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Creation build confirmed: %s as %s -> roster %s"),
+		*CleanName, *Build.StatusLine, *Match->ArchetypeId.ToString());
 }
 

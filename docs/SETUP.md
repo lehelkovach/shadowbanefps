@@ -283,6 +283,11 @@ Once an OCI dedicated server exists (section 4), clients join with the VM IP:
 # or: .\scripts\Run-Game.ps1 -Server 144.24.46.16:7777
 ```
 
+**Open lobby (no matchmaker):** leave the dedicated running. 2+ players each run
+`Connect-DevServer.ps1` anytime. Prefer server started with `?Mode=FFA` for
+deathmatch dogfood (see `docs/SCRIPTS.md` — FFA open lobby). In-game:
+`SBName YourHero`, die → `C` builder → Enter. Nametags float over heads.
+
 ### 5.5 Prompt the friend's Local Agent with this
 
 Paste something like this into **Cursor Desktop → Agent** on their rig:

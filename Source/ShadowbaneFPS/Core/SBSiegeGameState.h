@@ -45,6 +45,12 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Siege")
 	ESBMatchResult GetResult() const { return Result; }
 
+	UFUNCTION(BlueprintPure, Category = "Siege")
+	ESBMatchMode GetMatchMode() const { return MatchMode; }
+
+	UFUNCTION(BlueprintPure, Category = "Siege")
+	bool IsFreeForAll() const { return MatchMode == ESBMatchMode::FreeForAll; }
+
 	/** 0..1 progress on the inner-keep final objective (design doc §5). */
 	UFUNCTION(BlueprintPure, Category = "Siege")
 	float GetFinalObjectiveProgress() const { return FinalObjectiveProgress; }
@@ -64,6 +70,7 @@ public:
 	void ServerSetConquestStage(ESBConquestStage NewStage);
 	void ServerSetResult(ESBMatchResult NewResult) { if (HasAuthority()) { Result = NewResult; } }
 	void ServerSetFinalObjectiveProgress(float NewProgress) { if (HasAuthority()) { FinalObjectiveProgress = FMath::Clamp(NewProgress, 0.f, 1.f); } }
+	void ServerSetMatchMode(ESBMatchMode NewMode) { if (HasAuthority()) { MatchMode = NewMode; } }
 
 	/** Server sets the server-world-time at which regulation ends. */
 	void ServerSetRegulationDeadline(double InDeadlineServerTime) { if (HasAuthority()) { RegulationDeadlineServerTime = InDeadlineServerTime; } }
@@ -87,6 +94,9 @@ protected:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
 	ESBMatchResult Result = ESBMatchResult::Undecided;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
+	ESBMatchMode MatchMode = ESBMatchMode::Siege;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
 	float FinalObjectiveProgress = 0.f;

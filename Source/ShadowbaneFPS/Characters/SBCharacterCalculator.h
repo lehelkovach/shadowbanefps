@@ -53,6 +53,8 @@ struct FSBCharacterBuildState
 {
 	GENERATED_BODY()
 
+	/** Display name shown over head / PlayerState (typed in builder). */
+	UPROPERTY(BlueprintReadOnly) FString HeroName;
 	UPROPERTY(BlueprintReadOnly) FString Race = TEXT("Human");
 	UPROPERTY(BlueprintReadOnly) FString BaseClass = TEXT("Fighter");
 	UPROPERTY(BlueprintReadOnly) FString Prestige = TEXT("Warrior");

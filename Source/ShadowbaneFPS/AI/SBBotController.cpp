@@ -5,6 +5,7 @@
 #include "Characters/SBCharacter.h"
 #include "Characters/SBCharacterArchetype.h"
 #include "Core/SBPlayerState.h"
+#include "Core/SBRulesLibrary.h"
 #include "Core/SBLog.h"
 #include "Siege/SBCapturePoint.h"
 #include "Siege/SBConquestObjective.h"
@@ -176,7 +177,11 @@ void ASBBotController::GatherWorldFacts(FSBBotWorldFacts& OutFacts) const
 		}
 
 		const float Dist = FVector::Dist(Origin, Other->GetActorLocation());
-		if (TheirPS->GetTeam() != BotTeam)
+		const bool bFFA = USBRulesLibrary::IsWorldFreeForAll(this);
+		const bool bEnemy = bFFA
+			? true
+			: (TheirPS->GetTeam() != BotTeam);
+		if (bEnemy)
 		{
 			if (Dist < BestEnemyDist)
 			{
@@ -185,7 +190,7 @@ void ASBBotController::GatherWorldFacts(FSBBotWorldFacts& OutFacts) const
 				OutFacts.EnemyDistance = Dist;
 			}
 		}
-		else
+		else if (!bFFA)
 		{
 			const float MaxHp = FMath::Max(1.f, Other->GetMaxHealth());
 			if (Other->GetHealth() / MaxHp < 0.65f && Dist < BestAllyDist)

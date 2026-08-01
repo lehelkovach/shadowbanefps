@@ -1,6 +1,8 @@
 // Copyright shadowbanefps.
 
 #include "SBRulesLibrary.h"
+#include "SBSiegeGameState.h"
+#include "Engine/World.h"
 
 ESBStructureState USBRulesLibrary::ComputeStructureState(float HealthPercent, float DamagedThreshold)
 {
@@ -142,11 +144,53 @@ bool USBRulesLibrary::ShouldShowDeathOverlay(bool bAlive, bool bHasPawn)
 
 bool USBRulesLibrary::IsFriendlyFire(ESBTeam ShooterTeam, ESBTeam TargetTeam)
 {
+	return IsFriendlyFire(ShooterTeam, TargetTeam, false);
+}
+
+bool USBRulesLibrary::IsFriendlyFire(ESBTeam ShooterTeam, ESBTeam TargetTeam, bool bFreeForAll)
+{
+	if (bFreeForAll)
+	{
+		return false;
+	}
 	if (ShooterTeam == ESBTeam::Unassigned || TargetTeam == ESBTeam::Unassigned)
 	{
 		return false;
 	}
 	return ShooterTeam == TargetTeam;
+}
+
+bool USBRulesLibrary::IsWorldFreeForAll(const UObject* WorldContextObject)
+{
+	const UWorld* World = WorldContextObject
+		? WorldContextObject->GetWorld()
+		: nullptr;
+	if (!World)
+	{
+		return false;
+	}
+	if (const ASBSiegeGameState* GS = World->GetGameState<ASBSiegeGameState>())
+	{
+		return GS->IsFreeForAll();
+	}
+	return false;
+}
+
+bool USBRulesLibrary::AreAllies(ESBTeam A, ESBTeam B, bool bFreeForAll, bool bIsSelf)
+{
+	if (bIsSelf)
+	{
+		return true;
+	}
+	if (bFreeForAll)
+	{
+		return false;
+	}
+	if (A == ESBTeam::Unassigned || B == ESBTeam::Unassigned)
+	{
+		return false;
+	}
+	return A == B;
 }
 
 void USBRulesLibrary::SplitBotsAcrossTeams(int32 TotalBots, int32 MaxPerTeam, int32& OutAttackers, int32& OutDefenders)

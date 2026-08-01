@@ -16,6 +16,7 @@
 #include "Engine/Engine.h"
 #include "Engine/NetConnection.h"
 #include "Engine/World.h"
+#include "EngineUtils.h"
 #include "GameFramework/PlayerState.h"
 #include "GameFramework/PlayerController.h"
 #include "CanvasItem.h"
@@ -41,6 +42,7 @@ void ASBSiegeHUD::DrawHUD()
 	const float Delta = GetWorld() ? GetWorld()->GetDeltaSeconds() : 0.f;
 	FSBClientDebug::TickMessages(Delta);
 	DrawDamageFloaters(Delta);
+	DrawWorldNametags();
 
 	float Y = 24.f;
 	DrawConnectionPanel(Y);
@@ -49,21 +51,30 @@ void ASBSiegeHUD::DrawHUD()
 	const ASBPlayerController* PC = Cast<ASBPlayerController>(GetOwningPlayerController());
 	const ASBPlayerState* PS = PC ? PC->GetPlayerState<ASBPlayerState>() : nullptr;
 	const ASBCharacter* Character = PC ? Cast<ASBCharacter>(PC->GetPawn()) : nullptr;
+	const bool bFFA = GS && GS->IsFreeForAll();
 
 	if (GS)
 	{
-		const FString Clock = USBRulesLibrary::FormatMatchClock(GS->GetRemainingRegulationSeconds());
+		if (bFFA)
+		{
+			DrawLine(Y, TEXT("MODE  FFA DEATHMATCH  |  Open lobby — join anytime"),
+				FLinearColor(1.f, 0.75f, 0.35f));
+		}
+		else
+		{
+			const FString Clock = USBRulesLibrary::FormatMatchClock(GS->GetRemainingRegulationSeconds());
 
-		DrawLine(Y, FString::Printf(TEXT("TIME %s  |  %s  |  %s"),
-			*Clock,
-			*UEnum::GetDisplayValueAsText(GS->GetPhase()).ToString(),
-			*UEnum::GetDisplayValueAsText(GS->GetConquestStage()).ToString()));
+			DrawLine(Y, FString::Printf(TEXT("TIME %s  |  %s  |  %s"),
+				*Clock,
+				*UEnum::GetDisplayValueAsText(GS->GetPhase()).ToString(),
+				*UEnum::GetDisplayValueAsText(GS->GetConquestStage()).ToString()));
 
-		const float ObjPct = GS->GetFinalObjectiveProgress();
-		DrawLine(Y, FString::Printf(TEXT("Final Objective: %d%%"), FMath::RoundToInt(ObjPct * 100.f)),
-			USBPlaceholderArt::ObjectiveColor(ObjPct));
-		DrawHealthBar(24.f, Y, 280.f, 10.f, ObjPct);
-		Y += 18.f;
+			const float ObjPct = GS->GetFinalObjectiveProgress();
+			DrawLine(Y, FString::Printf(TEXT("Final Objective: %d%%"), FMath::RoundToInt(ObjPct * 100.f)),
+				USBPlaceholderArt::ObjectiveColor(ObjPct));
+			DrawHealthBar(24.f, Y, 280.f, 10.f, ObjPct);
+			Y += 18.f;
+		}
 
 		if (GS->GetResult() != ESBMatchResult::Undecided)
 		{
@@ -75,10 +86,17 @@ void ASBSiegeHUD::DrawHUD()
 
 	if (PS)
 	{
-		const FLinearColor TeamTint = USBPlaceholderArt::TeamColor(PS->GetTeam());
-		DrawLine(Y, FString::Printf(TEXT("Team: %s"),
-			*UEnum::GetDisplayValueAsText(PS->GetTeam()).ToString()),
-			TeamTint);
+		DrawLine(Y, FString::Printf(TEXT("You: %s  |  K/D %d/%d"),
+			*PS->GetPlayerName(), PS->GetKillCount(), PS->GetDeathCount()),
+			FLinearColor(0.95f, 0.95f, 0.7f));
+
+		if (!bFFA)
+		{
+			const FLinearColor TeamTint = USBPlaceholderArt::TeamColor(PS->GetTeam());
+			DrawLine(Y, FString::Printf(TEXT("Team: %s"),
+				*UEnum::GetDisplayValueAsText(PS->GetTeam()).ToString()),
+				TeamTint);
+		}
 
 		if (const USBCharacterArchetype* Arch = PS->GetSelectedArchetype())
 		{
@@ -332,6 +350,12 @@ void ASBSiegeHUD::DrawCreationBuilder(float& Y)
 
 	const FSBCharacterBuildState Build = PC->GetCreationBuild();
 	DrawLine(Y, TEXT("--- shadowbanefps Creation Builder ---"), FLinearColor(1.f, 0.85f, 0.4f));
+	const FString NameHint = PC->IsHeroNameEditing()
+		? TEXT("  ◂ typing (Enter locks)")
+		: TEXT("  (N to type, or SBName)");
+	DrawLine(Y, FString::Printf(TEXT("Hero name: %s%s"),
+		*PC->GetCreationHeroName(), *NameHint),
+		PC->IsHeroNameEditing() ? FLinearColor(1.f, 1.f, 0.4f) : FLinearColor(1.f, 0.95f, 0.55f));
 	DrawLine(Y, Build.StatusLine, FLinearColor(0.95f, 0.95f, 0.8f));
 	DrawLine(Y, FString::Printf(
 		TEXT("FPS HP %.0f  Mana %.0f  Stam %.0f  Speed %.0f  Dmg %.0f  %s"),
@@ -381,9 +405,77 @@ void ASBSiegeHUD::DrawCreationBuilder(float& Y)
 		Preview.Num() > 0 ? *FString::Join(Preview, TEXT(", ")) : TEXT("(empty)")),
 		FLinearColor(0.6f, 0.65f, 0.8f));
 
-	DrawLine(Y, TEXT("[ ] race   , . path   - = prestige   ; ' discipline   Enter confirm"),
+	DrawLine(Y, TEXT("N name   [ ] race   , . path   - = prestige   ; ' discipline   Enter confirm"),
 		FLinearColor(0.7f, 0.7f, 0.7f));
+	DrawLine(Y, TEXT("Or console: SBName YourName"),
+		FLinearColor(0.65f, 0.7f, 0.65f));
 	Y += 6.f;
+}
+
+void ASBSiegeHUD::DrawWorldNametags()
+{
+	APlayerController* PC = GetOwningPlayerController();
+	UWorld* World = GetWorld();
+	if (!Canvas || !PC || !World || !GEngine)
+	{
+		return;
+	}
+
+	const APawn* LocalPawn = PC->GetPawn();
+	const ASBSiegeGameState* GS = World->GetGameState<ASBSiegeGameState>();
+	const bool bFFA = GS && GS->IsFreeForAll();
+	const float MaxDistSq = FMath::Square(4500.f);
+
+	for (TActorIterator<ASBCharacter> It(World); It; ++It)
+	{
+		ASBCharacter* Other = *It;
+		if (!Other || Other->GetHealth() <= 0.f)
+		{
+			continue;
+		}
+
+		const ASBPlayerState* TheirPS = Other->GetPlayerState<ASBPlayerState>();
+		if (!TheirPS)
+		{
+			continue;
+		}
+
+		const FVector WorldPos = Other->GetActorLocation() + FVector(0.f, 0.f, 110.f);
+		if (LocalPawn && FVector::DistSquared(LocalPawn->GetActorLocation(), WorldPos) > MaxDistSq)
+		{
+			continue;
+		}
+
+		FVector2D ScreenPos;
+		if (!PC->ProjectWorldLocationToScreen(WorldPos, ScreenPos, true))
+		{
+			continue;
+		}
+
+		const bool bSelf = (Other == LocalPawn);
+		FString Label = TheirPS->GetPlayerName();
+		if (Label.IsEmpty())
+		{
+			Label = TEXT("Hero");
+		}
+		Label = FString::Printf(TEXT("%s  %d/%d"), *Label, TheirPS->GetKillCount(), TheirPS->GetDeathCount());
+
+		FLinearColor Color = bSelf
+			? FLinearColor(0.95f, 0.95f, 0.55f)
+			: (bFFA ? FLinearColor(1.f, 0.45f, 0.35f) : USBPlaceholderArt::TeamColor(TheirPS->GetTeam()));
+
+		UFont* Font = GEngine->GetLargeFont();
+		float TextW = 0.f;
+		float TextH = 0.f;
+		Canvas->StrLen(Font, Label, TextW, TextH);
+		const float Scale = 0.85f;
+		const FVector2D DrawAt(ScreenPos.X - TextW * 0.5f * Scale, ScreenPos.Y - TextH * Scale);
+
+		FCanvasTextItem Item(DrawAt, FText::FromString(Label), Font, Color);
+		Item.EnableShadow(FLinearColor(0.f, 0.f, 0.f, 0.9f));
+		Item.Scale = FVector2D(Scale, Scale);
+		Canvas->DrawItem(Item);
+	}
 }
 
 void ASBSiegeHUD::DrawRosterChips(float& Y)

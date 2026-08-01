@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="${SHADOWBANE_ROOT:-/opt/shadowbanefps/current}"
-MAP_NAME="${MAP_NAME:-BrokenCitadel}"
+MAP_NAME="${MAP_NAME:-BrokenCitadel?Mode=FFA}"
 # shellcheck disable=SC2086
 SERVER_ARGS=${SERVER_ARGS:--log -port=7777}
 

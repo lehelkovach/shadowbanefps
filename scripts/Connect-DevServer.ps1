@@ -4,6 +4,8 @@
 #   .\scripts\Connect-DevServer.ps1 -Server "144.24.46.16:7777"
 #
 # Thin wrapper around Run-Game.ps1 for the OCI DEV address.
+# For FFA dogfood the DEV dedicated must be started with ?Mode=FFA
+# (see docs/FFA_DOGFOOD.md). Clients just connect — no matchmaker.
 
 param(
     [string]$EngineRoot = "",
@@ -14,7 +16,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Write-Host "Connecting to DEV server $Server ..."
+Write-Host "Connecting to DEV server $Server (open lobby — no matchmaking) ..."
+Write-Host "Tip: die or wait death → C builder → N type name → Enter confirm build."
 & (Join-Path $PSScriptRoot "Run-Game.ps1") `
     -EngineRoot $EngineRoot `
     -Server $Server `

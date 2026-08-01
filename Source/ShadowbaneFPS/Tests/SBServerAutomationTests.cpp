@@ -75,6 +75,12 @@ bool FSBServer_FriendlyFireGateTest::RunTest(const FString& Parameters)
 		USBRulesLibrary::IsFriendlyFire(ESBTeam::Unassigned, ESBTeam::Attackers));
 	TestFalse(TEXT("Unassigned target not friendly"),
 		USBRulesLibrary::IsFriendlyFire(ESBTeam::Defenders, ESBTeam::Unassigned));
+	TestFalse(TEXT("FFA same team is not friendly"),
+		USBRulesLibrary::IsFriendlyFire(ESBTeam::Attackers, ESBTeam::Attackers, true));
+	TestTrue(TEXT("FFA self is ally"),
+		USBRulesLibrary::AreAllies(ESBTeam::Attackers, ESBTeam::Attackers, true, true));
+	TestFalse(TEXT("FFA other is not ally"),
+		USBRulesLibrary::AreAllies(ESBTeam::Attackers, ESBTeam::Attackers, true, false));
 
 	return true;
 }

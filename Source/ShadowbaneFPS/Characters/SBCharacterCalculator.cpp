@@ -200,7 +200,8 @@ void USBCharacterCalculator::Recalculate(FSBCharacterBuildState& B)
 
 	B.bValid = Prestige != nullptr;
 	B.StatusLine = FString::Printf(
-		TEXT("%s %s / %s | disc %s | pts left %d | STR %d DEX %d CON %d INT %d SPI %d"),
+		TEXT("%s — %s %s / %s | disc %s | pts left %d | STR %d DEX %d CON %d INT %d SPI %d"),
+		B.HeroName.IsEmpty() ? TEXT("(no name)") : *B.HeroName,
 		*B.Race, *B.BaseClass, *B.Prestige,
 		B.Discipline.IsEmpty() ? TEXT("(none)") : *B.Discipline,
 		B.PointsRemaining,

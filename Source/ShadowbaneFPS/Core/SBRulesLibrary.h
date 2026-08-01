@@ -95,6 +95,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Siege|Rules|Server")
 	static bool IsFriendlyFire(ESBTeam ShooterTeam, ESBTeam TargetTeam);
 
+	/** FreeForAll matches never treat targets as friendly (everyone is hostile). */
+	static bool IsFriendlyFire(ESBTeam ShooterTeam, ESBTeam TargetTeam, bool bFreeForAll);
+
+	/** Reads replicated MatchMode from GameState when present. */
+	UFUNCTION(BlueprintPure, Category = "Siege|Rules")
+	static bool IsWorldFreeForAll(const UObject* WorldContextObject);
+
+	/** True if same team and not FFA (heals / ally auras). Self is always an ally. */
+	static bool AreAllies(ESBTeam A, ESBTeam B, bool bFreeForAll, bool bIsSelf);
+
 	/**
 	 * Split a bot pool into attackers/defenders for populate tests.
 	 * Prefer filling toward 5v5; leftovers go to the smaller side (Attackers on tie).

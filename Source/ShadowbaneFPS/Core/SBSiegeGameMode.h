@@ -66,6 +66,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Rules|Admin")
 	bool bForceAdminSpectate = false;
 
+	/** URL ?Mode=FFA (or Deathmatch) — open dogfood deathmatch, no siege win. */
+	UPROPERTY(EditDefaultsOnly, Category = "Rules|Mode")
+	bool bFreeForAll = false;
+
+	UFUNCTION(BlueprintPure, Category = "Siege|Mode")
+	bool IsFreeForAll() const { return bFreeForAll; }
+
 	UFUNCTION(BlueprintCallable, Category = "Siege|Bots")
 	int32 SpawnBots(int32 TotalBots);
 

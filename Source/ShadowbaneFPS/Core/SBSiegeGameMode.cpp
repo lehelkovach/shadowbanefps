@@ -6,6 +6,7 @@
 #include "SBPlayerController.h"
 #include "SBSpawnPoint.h"
 #include "SBLog.h"
+#include "SBClientDebug.h"
 #include "SBRulesLibrary.h"
 #include "SBMatchTelemetry.h"
 #include "UI/SBSiegeHUD.h"
@@ -56,8 +57,14 @@ void ASBSiegeGameMode::ParseLaunchOptions(const FString& Options)
 		bForceAdminSpectate = true;
 	}
 
-	UE_LOG(LogShadowbaneServer, Log, TEXT("Launch options: AutoSpawnBots=%d AdminSpectate=%d"),
-		AutoSpawnBots, bForceAdminSpectate ? 1 : 0);
+	const FString ModeOpt = UGameplayStatics::ParseOption(Options, TEXT("Mode")).ToUpper();
+	if (ModeOpt == TEXT("FFA") || ModeOpt == TEXT("DEATHMATCH") || ModeOpt == TEXT("DM"))
+	{
+		bFreeForAll = true;
+	}
+
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Launch options: AutoSpawnBots=%d AdminSpectate=%d FreeForAll=%d"),
+		AutoSpawnBots, bForceAdminSpectate ? 1 : 0, bFreeForAll ? 1 : 0);
 }
 
 void ASBSiegeGameMode::BeginPlay()
@@ -65,6 +72,10 @@ void ASBSiegeGameMode::BeginPlay()
 	Super::BeginPlay();
 
 	SiegeState = GetGameState<ASBSiegeGameState>();
+	if (SiegeState && HasAuthority())
+	{
+		SiegeState->ServerSetMatchMode(bFreeForAll ? ESBMatchMode::FreeForAll : ESBMatchMode::Siege);
+	}
 	EnsureRoster();
 	EnsureCitadel();
 	StartMatch();
@@ -114,6 +125,10 @@ void ASBSiegeGameMode::HandleStartingNewPlayer_Implementation(APlayerController*
 	{
 		SiegeState = GetGameState<ASBSiegeGameState>();
 	}
+	if (SiegeState && HasAuthority())
+	{
+		SiegeState->ServerSetMatchMode(bFreeForAll ? ESBMatchMode::FreeForAll : ESBMatchMode::Siege);
+	}
 
 	ASBPlayerController* SBPC = Cast<ASBPlayerController>(NewPlayer);
 	ASBPlayerState* PS = NewPlayer ? NewPlayer->GetPlayerState<ASBPlayerState>() : nullptr;
@@ -142,14 +157,16 @@ void ASBSiegeGameMode::HandleStartingNewPlayer_Implementation(APlayerController*
 		PS->SetSelectedArchetype(DefaultArch);
 	}
 
-	UE_LOG(LogShadowbaneServer, Log, TEXT("Player starting: %s -> %s archetype=%s"),
+	UE_LOG(LogShadowbaneServer, Log, TEXT("Player starting: %s -> %s archetype=%s mode=%s"),
 		*PS->GetPlayerName(),
 		*UEnum::GetValueAsString(Team),
-		*PS->GetSelectedArchetypeId().ToString());
-	UE_LOG(LogShadowbane, Log, TEXT("Player starting: %s -> %s archetype=%s"),
+		*PS->GetSelectedArchetypeId().ToString(),
+		bFreeForAll ? TEXT("FFA") : TEXT("Siege"));
+	UE_LOG(LogShadowbane, Log, TEXT("Player starting: %s -> %s archetype=%s mode=%s"),
 		*PS->GetPlayerName(),
 		*UEnum::GetValueAsString(Team),
-		*PS->GetSelectedArchetypeId().ToString());
+		*PS->GetSelectedArchetypeId().ToString(),
+		bFreeForAll ? TEXT("FFA") : TEXT("Siege"));
 
 	// Immediate first spawn for the pilot (lobby selection comes later).
 	SpawnPlayerFromController(NewPlayer);
@@ -173,6 +190,24 @@ void ASBSiegeGameMode::StartMatch()
 	}
 	Telemetry->StartMatchSession();
 
+	SiegeState->ServerSetMatchMode(bFreeForAll ? ESBMatchMode::FreeForAll : ESBMatchMode::Siege);
+
+	if (bFreeForAll)
+	{
+		// Open deathmatch lobby: no siege clock win. Keep a soft timer for HUD only.
+		RegulationDeadline = GetWorld()->GetTimeSeconds() + RegulationSeconds;
+		SiegeState->ServerSetRegulationDeadline(SiegeState->GetServerWorldTimeSeconds() + RegulationSeconds);
+		SiegeState->ServerSetPhase(ESBMatchPhase::Recon);
+		LastLoggedPhase = ESBMatchPhase::Recon;
+		Telemetry->RecordPhase(ESBMatchPhase::Recon);
+
+		UE_LOG(LogShadowbaneServer, Log, TEXT("FFA Deathmatch started (open lobby, no siege win) roster=%d"),
+			Roster.Num());
+		UE_LOG(LogShadowbane, Log, TEXT("FFA Deathmatch started (open lobby, no siege win) roster=%d"),
+			Roster.Num());
+		return;
+	}
+
 	RegulationDeadline = GetWorld()->GetTimeSeconds() + RegulationSeconds;
 	SiegeState->ServerSetRegulationDeadline(SiegeState->GetServerWorldTimeSeconds() + RegulationSeconds);
 	SiegeState->ServerSetPhase(ESBMatchPhase::Recon);
@@ -194,6 +229,10 @@ void ASBSiegeGameMode::StartMatch()
 
 void ASBSiegeGameMode::TickPhase()
 {
+	if (bFreeForAll)
+	{
+		return;
+	}
 	UpdatePhaseForElapsed();
 	UpdateInnerKeepStageFromPressure();
 }
@@ -263,7 +302,7 @@ void ASBSiegeGameMode::UpdateInnerKeepStageFromPressure()
 
 void ASBSiegeGameMode::AdvanceConquestStage(ESBConquestStage NewStage)
 {
-	if (!HasAuthority() || !SiegeState)
+	if (!HasAuthority() || !SiegeState || bFreeForAll)
 	{
 		return;
 	}
@@ -298,7 +337,7 @@ void ASBSiegeGameMode::AdvanceConquestStage(ESBConquestStage NewStage)
 
 void ASBSiegeGameMode::NotifyFinalObjectiveCompleted()
 {
-	if (!HasAuthority())
+	if (!HasAuthority() || bFreeForAll)
 	{
 		return;
 	}
@@ -319,7 +358,7 @@ void ASBSiegeGameMode::NotifyFinalObjectiveCompleted()
 
 void ASBSiegeGameMode::HandleRegulationExpired()
 {
-	if (!HasAuthority() || !SiegeState)
+	if (!HasAuthority() || !SiegeState || bFreeForAll)
 	{
 		return;
 	}
@@ -396,21 +435,24 @@ bool ASBSiegeGameMode::RequestSelectArchetype(ASBPlayerState* PlayerState, USBCh
 
 	const ESBTeam Team = PlayerState->GetTeam();
 
-	if ((Team == ESBTeam::Attackers && !Archetype->bAttackerEligible)
-		|| (Team == ESBTeam::Defenders && !Archetype->bDefenderEligible))
+	if (!bFreeForAll)
 	{
-		UE_LOG(LogShadowbane, Warning, TEXT("Archetype %s not eligible for %s"),
-			*Archetype->ArchetypeId.ToString(),
-			*UEnum::GetValueAsString(Team));
-		return false;
-	}
+		if ((Team == ESBTeam::Attackers && !Archetype->bAttackerEligible)
+			|| (Team == ESBTeam::Defenders && !Archetype->bDefenderEligible))
+		{
+			UE_LOG(LogShadowbane, Warning, TEXT("Archetype %s not eligible for %s"),
+				*Archetype->ArchetypeId.ToString(),
+				*UEnum::GetValueAsString(Team));
+			return false;
+		}
 
-	if (!CanTeamUseArchetype(Team, Archetype, PlayerState))
-	{
-		UE_LOG(LogShadowbane, Warning, TEXT("Archetype %s duplicate limit reached for %s"),
-			*Archetype->ArchetypeId.ToString(),
-			*UEnum::GetValueAsString(Team));
-		return false;
+		if (!CanTeamUseArchetype(Team, Archetype, PlayerState))
+		{
+			UE_LOG(LogShadowbane, Warning, TEXT("Archetype %s duplicate limit reached for %s"),
+				*Archetype->ArchetypeId.ToString(),
+				*UEnum::GetValueAsString(Team));
+			return false;
+		}
 	}
 
 	const FName FromId = PlayerState->GetSelectedArchetypeId();
@@ -441,6 +483,11 @@ void ASBSiegeGameMode::NotifyPlayerKilled(ASBPlayerState* Victim, ASBPlayerState
 	}
 
 	Victim->SetAlive(false);
+	Victim->AddDeath();
+	if (Killer && Killer != Victim)
+	{
+		Killer->AddKill();
+	}
 
 	UE_LOG(LogShadowbaneServer, Log, TEXT("Player killed: victim=%s(%s) killer=%s(%s) power=%s"),
 		*Victim->GetPlayerName(),
@@ -644,13 +691,22 @@ int32 ASBSiegeGameMode::SpawnBots(int32 TotalBots)
 
 	int32 Atk = 0;
 	int32 Def = 0;
-	USBRulesLibrary::SplitBotsAcrossTeams(TotalBots, MaxBotsPerTeam, Atk, Def);
-
-	// 5v5 with human as attacker hero: leave one attacker slot open (Bots=9 → 4 atk + 5 def).
-	if (TotalBots == 9 && MaxBotsPerTeam >= 5)
+	if (bFreeForAll)
 	{
-		Atk = 4;
-		Def = 5;
+		// Everyone hostile via MatchMode; pads use Attackers. Cap lightly for dogfood.
+		Atk = FMath::Clamp(TotalBots, 0, FMath::Max(MaxBotsPerTeam * 2, 12));
+		Def = 0;
+	}
+	else
+	{
+		USBRulesLibrary::SplitBotsAcrossTeams(TotalBots, MaxBotsPerTeam, Atk, Def);
+
+		// 5v5 with human as attacker hero: leave one attacker slot open (Bots=9 → 4 atk + 5 def).
+		if (TotalBots == 9 && MaxBotsPerTeam >= 5)
+		{
+			Atk = 4;
+			Def = 5;
+		}
 	}
 
 	int32 Spawned = 0;
@@ -669,8 +725,8 @@ int32 ASBSiegeGameMode::SpawnBots(int32 TotalBots)
 		}
 	}
 
-	UE_LOG(LogShadowbaneServer, Log, TEXT("SpawnBots requested=%d spawned=%d (atk=%d def=%d)"),
-		TotalBots, Spawned, Atk, Def);
+	UE_LOG(LogShadowbaneServer, Log, TEXT("SpawnBots requested=%d spawned=%d (atk=%d def=%d ffa=%d)"),
+		TotalBots, Spawned, Atk, Def, bFreeForAll ? 1 : 0);
 	return Spawned;
 }
 
@@ -750,7 +806,7 @@ USBCharacterArchetype* ASBSiegeGameMode::PickBotArchetype(ESBTeam Team) const
 
 bool ASBSiegeGameMode::CanTeamUseArchetype(ESBTeam Team, const USBCharacterArchetype* Archetype, const ASBPlayerState* Ignoring) const
 {
-	if (!Archetype || !GameState)
+	if (bFreeForAll || !Archetype || !GameState)
 	{
 		return true;
 	}
@@ -773,6 +829,7 @@ bool ASBSiegeGameMode::CanTeamUseArchetype(ESBTeam Team, const USBCharacterArche
 
 ESBTeam ASBSiegeGameMode::PickTeamForNewPlayer() const
 {
+	// FFA: still balance Attackers/Defenders so spawn pads scatter; hostility comes from MatchMode.
 	int32 Attackers = 0;
 	int32 Defenders = 0;
 	if (GameState)
@@ -817,7 +874,16 @@ ASBSpawnPoint* ASBSiegeGameMode::FindSpawnPoint(ESBTeam Team, const USBCharacter
 	for (TActorIterator<ASBSpawnPoint> It(GetWorld()); It; ++It)
 	{
 		ASBSpawnPoint* Spot = *It;
-		if (Spot && Spot->IsAvailableFor(Team, Stage))
+		if (!Spot)
+		{
+			continue;
+		}
+		if (bFreeForAll)
+		{
+			// Any pad is fair game in open deathmatch.
+			Candidates.Add(Spot);
+		}
+		else if (Spot->IsAvailableFor(Team, Stage))
 		{
 			Candidates.Add(Spot);
 		}

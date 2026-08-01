@@ -1086,7 +1086,7 @@ void ASBCharacter::PerformSpellBolt()
 	{
 		const ASBPlayerState* MyPS = GetPlayerState<ASBPlayerState>();
 		const ASBPlayerState* TheirPS = Target->GetPlayerState<ASBPlayerState>();
-		if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam()))
+		if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam(), USBRulesLibrary::IsWorldFreeForAll(this)))
 		{
 			return;
 		}
@@ -1115,7 +1115,9 @@ void ASBCharacter::PerformSpellHealPulse()
 
 		const ASBPlayerState* MyPS = GetPlayerState<ASBPlayerState>();
 		const ASBPlayerState* TheirPS = Ally->GetPlayerState<ASBPlayerState>();
-		if (MyPS && TheirPS && MyPS->GetTeam() != TheirPS->GetTeam() && Ally != this)
+		const bool bFFA = USBRulesLibrary::IsWorldFreeForAll(this);
+		if (MyPS && TheirPS
+			&& !USBRulesLibrary::AreAllies(MyPS->GetTeam(), TheirPS->GetTeam(), bFFA, Ally == this))
 		{
 			continue;
 		}
@@ -1153,7 +1155,7 @@ void ASBCharacter::PerformSpellShockwave()
 
 		const ASBPlayerState* MyPS = GetPlayerState<ASBPlayerState>();
 		const ASBPlayerState* TheirPS = Target->GetPlayerState<ASBPlayerState>();
-		if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam()))
+		if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam(), USBRulesLibrary::IsWorldFreeForAll(this)))
 		{
 			continue;
 		}
@@ -1251,7 +1253,7 @@ void ASBCharacter::PerformMeleeSwing()
 		{
 			const ASBPlayerState* MyPS = GetPlayerState<ASBPlayerState>();
 			const ASBPlayerState* TheirPS = Target->GetPlayerState<ASBPlayerState>();
-			if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam()))
+			if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam(), USBRulesLibrary::IsWorldFreeForAll(this)))
 			{
 				continue;
 			}
@@ -1303,7 +1305,7 @@ void ASBCharacter::PerformHitscanFire()
 	{
 		const ASBPlayerState* MyPS = GetPlayerState<ASBPlayerState>();
 		const ASBPlayerState* TheirPS = Target->GetPlayerState<ASBPlayerState>();
-		if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam()))
+		if (MyPS && TheirPS && USBRulesLibrary::IsFriendlyFire(MyPS->GetTeam(), TheirPS->GetTeam(), USBRulesLibrary::IsWorldFreeForAll(this)))
 		{
 			UE_LOG(LogShadowbaneCombat, Verbose, TEXT("Friendly fire blocked %s -> %s"),
 				*GetName(), *Target->GetName());
@@ -1337,7 +1339,9 @@ void ASBCharacter::PerformSupportTick(float DeltaSeconds)
 
 			const ASBPlayerState* MyPS = GetPlayerState<ASBPlayerState>();
 			const ASBPlayerState* TheirPS = Other->GetPlayerState<ASBPlayerState>();
-			if (!MyPS || !TheirPS || MyPS->GetTeam() != TheirPS->GetTeam())
+			const bool bFFA = USBRulesLibrary::IsWorldFreeForAll(this);
+			if (!MyPS || !TheirPS
+				|| !USBRulesLibrary::AreAllies(MyPS->GetTeam(), TheirPS->GetTeam(), bFFA, false))
 			{
 				continue;
 			}

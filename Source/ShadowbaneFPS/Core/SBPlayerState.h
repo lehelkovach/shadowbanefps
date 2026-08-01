@@ -31,6 +31,15 @@ public:
 	void SetTeam(ESBTeam NewTeam);
 
 	UFUNCTION(BlueprintCallable, Category = "Siege")
+	int32 GetKillCount() const { return KillCount; }
+
+	UFUNCTION(BlueprintCallable, Category = "Siege")
+	int32 GetDeathCount() const { return DeathCount; }
+
+	void AddKill();
+	void AddDeath();
+
+	UFUNCTION(BlueprintCallable, Category = "Siege")
 	USBCharacterArchetype* GetSelectedArchetype() const;
 
 	UFUNCTION(BlueprintCallable, Category = "Siege")
@@ -59,6 +68,12 @@ protected:
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
 	bool bAlive = false;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
+	int32 KillCount = 0;
+
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege")
+	int32 DeathCount = 0;
 
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Siege|Builder")
 	bool bHasCreationVitals = false;

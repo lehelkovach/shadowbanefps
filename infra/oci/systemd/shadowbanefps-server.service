@@ -10,7 +10,7 @@ User=sbfps
 Group=sbfps
 WorkingDirectory=/opt/shadowbanefps/current
 EnvironmentFile=-/etc/shadowbanefps.env
-Environment=MAP_NAME=BrokenCitadel
+Environment=MAP_NAME=BrokenCitadel?Mode=FFA
 Environment=SERVER_ARGS=-log -port=7777
 
 # Prefer the packaged binary; fall back to UAT's .sh launcher.
