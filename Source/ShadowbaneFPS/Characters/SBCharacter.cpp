@@ -259,6 +259,8 @@ void ASBCharacter::BeginPlay()
 		SBBattleAxeMesh::Build(TpBattleAxe);
 	}
 	UpdatePlaceholderVisuals();
+	EnsureMeleeSwingAnimAssets();
+	BindHeroBoneSwingOverlay();
 
 	// AnimBP / mesh init can stomp materials on the first frames — re-tint shortly after.
 	if (UWorld* World = GetWorld())
@@ -266,6 +268,12 @@ void ASBCharacter::BeginPlay()
 		FTimerHandle SkinTimer;
 		World->GetTimerManager().SetTimer(SkinTimer, FTimerDelegate::CreateUObject(this, &ASBCharacter::ApplyHeroRaceMaterials), 0.15f, false);
 	}
+}
+
+void ASBCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UnbindHeroBoneSwingOverlay();
+	Super::EndPlay(EndPlayReason);
 }
 
 void ASBCharacter::PossessedBy(AController* NewController)
@@ -1804,19 +1812,179 @@ void ASBCharacter::EnsureWeaponInHand()
 
 void ASBCharacter::PlayMeleeAttackAnimation()
 {
-	// Weapon chop only — never play jump/locomotion montages as a swing (looked like dancing).
+	EnsureMeleeSwingAnimAssets();
+	bMeleeMontagePlaying = false;
+
+	USkeletalMeshComponent* Hero = GetMesh();
+	UAnimInstance* Anim = Hero ? Hero->GetAnimInstance() : nullptr;
+	if (Anim && bUsingHeroMesh)
+	{
+		if (CachedMeleeMontage)
+		{
+			const float Len = Anim->Montage_Play(CachedMeleeMontage, 1.f);
+			if (Len > 0.f)
+			{
+				bMeleeMontagePlaying = true;
+				MeleeSwingAnimDuration = Len;
+				MeleeSwingAnimRemaining = Len;
+				UE_LOG(LogShadowbaneCombat, Verbose, TEXT("%s melee montage %.2fs"), *GetName(), Len);
+				return;
+			}
+		}
+
+		if (CachedMeleeSwingSequence)
+		{
+			UAnimMontage* Dyn = Anim->PlaySlotAnimationAsDynamicMontage(
+				CachedMeleeSwingSequence,
+				FName(TEXT("DefaultSlot")),
+				0.05f,
+				0.12f,
+				1.f,
+				1);
+			if (Dyn)
+			{
+				bMeleeMontagePlaying = true;
+				const float Len = Dyn->GetPlayLength();
+				if (Len > KINDA_SMALL_NUMBER)
+				{
+					MeleeSwingAnimDuration = Len;
+					MeleeSwingAnimRemaining = Len;
+				}
+				UE_LOG(LogShadowbaneCombat, Verbose, TEXT("%s melee slot sequence %.2fs"), *GetName(), Len);
+				return;
+			}
+		}
+	}
+
+	// No montage asset — procedural skeletal arm overlay + light torso lean.
 	ApplyMeleeBodyPose(0.f);
+}
+
+void ASBCharacter::EnsureMeleeSwingAnimAssets()
+{
+	if (!CachedMeleeMontage)
+	{
+		CachedMeleeMontage = LoadObject<UAnimMontage>(nullptr, SBMeleeSwingAnim::MeleeMontagePath);
+	}
+	if (!CachedMeleeSwingSequence)
+	{
+		CachedMeleeSwingSequence = LoadObject<UAnimSequence>(nullptr, SBMeleeSwingAnim::MeleeSequencePath);
+	}
+}
+
+void ASBCharacter::BindHeroBoneSwingOverlay()
+{
+	UnbindHeroBoneSwingOverlay();
+	if (USkeletalMeshComponent* Hero = GetMesh())
+	{
+		HeroBonesFinalizedHandle = Hero->RegisterOnBoneTransformsFinalizedDelegate(
+			FOnBoneTransformsFinalizedMultiCast::FDelegate::CreateUObject(this, &ASBCharacter::OnHeroBonesFinalized));
+	}
+}
+
+void ASBCharacter::UnbindHeroBoneSwingOverlay()
+{
+	if (HeroBonesFinalizedHandle.IsValid())
+	{
+		if (USkeletalMeshComponent* Hero = GetMesh())
+		{
+			Hero->UnregisterOnBoneTransformsFinalizedDelegate(HeroBonesFinalizedHandle);
+		}
+		HeroBonesFinalizedHandle.Reset();
+	}
+}
+
+void ASBCharacter::OnHeroBonesFinalized()
+{
+	if (bMeleeMontagePlaying || MeleeSwingAnimRemaining <= 0.f || !bUsingHeroMesh)
+	{
+		return;
+	}
+
+	const float Alpha = 1.f - (MeleeSwingAnimRemaining / FMath::Max(MeleeSwingAnimDuration, KINDA_SMALL_NUMBER));
+	ApplyProceduralMeleeArmBones(Alpha);
+}
+
+void ASBCharacter::ApplyProceduralMeleeArmBones(float Alpha01)
+{
+	USkeletalMeshComponent* Hero = GetMesh();
+	if (!Hero || !Hero->GetSkeletalMeshAsset())
+	{
+		return;
+	}
+
+	TArray<SBMeleeSwingAnim::FBoneDelta, TInlineAllocator<12>> Deltas;
+	SBMeleeSwingAnim::EvalSkeletalBoneDeltas(Alpha01, Deltas);
+	if (Deltas.Num() == 0)
+	{
+		return;
+	}
+
+	TArray<FTransform>& CS = Hero->GetEditableComponentSpaceTransforms();
+	const int32 NumBones = CS.Num();
+	if (NumBones <= 0)
+	{
+		return;
+	}
+
+	// Apply each delta in component space, then rotate all descendants by the same
+	// world delta around the bone origin so the limb stays connected.
+	for (const SBMeleeSwingAnim::FBoneDelta& Delta : Deltas)
+	{
+		const int32 BoneIdx = Hero->GetBoneIndex(Delta.Bone);
+		if (BoneIdx == INDEX_NONE || !CS.IsValidIndex(BoneIdx))
+		{
+			continue;
+		}
+
+		const FQuat AddQ = Delta.Euler.Quaternion();
+		const FVector Pivot = CS[BoneIdx].GetLocation();
+		const FQuat OldQ = CS[BoneIdx].GetRotation();
+		CS[BoneIdx].SetRotation(AddQ * OldQ);
+		CS[BoneIdx].NormalizeRotation();
+
+		for (int32 ChildIdx = BoneIdx + 1; ChildIdx < NumBones; ++ChildIdx)
+		{
+			if (Hero->GetParentBone(Hero->GetBoneName(ChildIdx)) == NAME_None)
+			{
+				continue;
+			}
+			// Only affect bones that list this bone as an ancestor.
+			bool bDescendant = false;
+			FName Walk = Hero->GetParentBone(Hero->GetBoneName(ChildIdx));
+			while (Walk != NAME_None)
+			{
+				if (Walk == Delta.Bone)
+				{
+					bDescendant = true;
+					break;
+				}
+				Walk = Hero->GetParentBone(Walk);
+			}
+			if (!bDescendant || !CS.IsValidIndex(ChildIdx))
+			{
+				continue;
+			}
+
+			const FVector Rel = CS[ChildIdx].GetLocation() - Pivot;
+			CS[ChildIdx].SetLocation(Pivot + AddQ.RotateVector(Rel));
+			CS[ChildIdx].SetRotation(AddQ * CS[ChildIdx].GetRotation());
+			CS[ChildIdx].NormalizeRotation();
+		}
+	}
+
+	Hero->MarkRenderDynamicDataDirty();
 }
 
 void ASBCharacter::ApplyMeleeBodyPose(float Alpha01)
 {
 	USkeletalMeshComponent* Hero = GetMesh();
-	if (!Hero || !bUsingHeroMesh)
+	if (!Hero || !bUsingHeroMesh || bMeleeMontagePlaying)
 	{
 		return;
 	}
 
-	// Keep body nearly still — the axe pivot does the swing. Large mesh yaw looked like dancing.
+	// Light torso lean — arm bones do the readable chop via montage or procedural overlay.
 	const float A = FMath::Clamp(Alpha01, 0.f, 1.f);
 	float LeanYaw = 0.f;
 	float LeanPitch = 0.f;
@@ -1825,20 +1993,20 @@ void ASBCharacter::ApplyMeleeBodyPose(float Alpha01)
 		if (A < 0.28f)
 		{
 			const float U = SBMeleeSwingAnim::Smooth01(A / 0.28f);
-			LeanYaw = FMath::Lerp(0.f, -6.f, U);
-			LeanPitch = FMath::Lerp(0.f, -2.f, U);
+			LeanYaw = FMath::Lerp(0.f, -8.f, U);
+			LeanPitch = FMath::Lerp(0.f, -3.f, U);
 		}
 		else if (A < 0.52f)
 		{
 			const float U = SBMeleeSwingAnim::Smooth01((A - 0.28f) / 0.24f);
-			LeanYaw = FMath::Lerp(-6.f, 10.f, U * U);
-			LeanPitch = FMath::Lerp(-2.f, 4.f, U);
+			LeanYaw = FMath::Lerp(-8.f, 14.f, U * U);
+			LeanPitch = FMath::Lerp(-3.f, 5.f, U);
 		}
 		else
 		{
 			const float U = SBMeleeSwingAnim::Smooth01((A - 0.52f) / 0.48f);
-			LeanYaw = FMath::Lerp(10.f, 0.f, U);
-			LeanPitch = FMath::Lerp(4.f, 0.f, U);
+			LeanYaw = FMath::Lerp(14.f, 0.f, U);
+			LeanPitch = FMath::Lerp(5.f, 0.f, U);
 		}
 	}
 
@@ -1987,6 +2155,7 @@ void ASBCharacter::UpdatePlaceholderVisuals()
 
 void ASBCharacter::ApplyMeleeIdlePose()
 {
+	bMeleeMontagePlaying = false;
 	if (FpWeaponPivot)
 	{
 		FpWeaponPivot->SetRelativeRotation(SBMeleeSwingAnim::EvalFpPivot(0.f));
@@ -2102,6 +2271,8 @@ void ASBCharacter::SetupHeroMeshForRace()
 	ApplyHeroRaceMaterials();
 	EnsureWeaponInHand();
 	ApplyMeleeIdlePose();
+	EnsureMeleeSwingAnimAssets();
+	BindHeroBoneSwingOverlay();
 }
 
 void ASBCharacter::ApplyHeroRaceMaterials()

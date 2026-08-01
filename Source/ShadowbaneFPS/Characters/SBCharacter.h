@@ -14,6 +14,8 @@ class ASBPlayerState;
 class UInputMappingContext;
 class UInputAction;
 class UProceduralMeshComponent;
+class UAnimMontage;
+class UAnimSequence;
 
 /**
  * Shared pilot pawn. Archetype data (stats / role) is applied at spawn so the
@@ -104,6 +106,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<USpringArmComponent> SpringArm;
@@ -249,6 +252,10 @@ protected:
 	FVector LastSwingBladePos = FVector::ZeroVector;
 	bool bSwingTrailValid = false;
 	TObjectPtr<UAnimMontage> CachedMeleeMontage = nullptr;
+	TObjectPtr<UAnimSequence> CachedMeleeSwingSequence = nullptr;
+	/** True while a skeletal montage/slot anim is driving the swing (skip procedural arm bones). */
+	bool bMeleeMontagePlaying = false;
+	FDelegateHandle HeroBonesFinalizedHandle;
 	FRotator HeroMeshBaseRelativeRot = FRotator(0.f, -90.f, 0.f);
 
 	/** Runtime Enhanced Input (no Content IMC assets required). */
@@ -410,5 +417,10 @@ protected:
 	void SetPlaceholderBodyVisible(bool bVisible);
 	void EnsureWeaponInHand();
 	void PlayMeleeAttackAnimation();
+	void EnsureMeleeSwingAnimAssets();
+	void BindHeroBoneSwingOverlay();
+	void UnbindHeroBoneSwingOverlay();
+	void OnHeroBonesFinalized();
+	void ApplyProceduralMeleeArmBones(float Alpha01);
 	void ApplyHeroRaceMaterials();
 };

@@ -1,8 +1,9 @@
-# Launch Unreal Editor for ShadowbaneFPS (PIE / content work).
+﻿# Launch Unreal Editor for ShadowbaneFPS (PIE / content work).
 #
 # Usage:
-#   .\scripts\Run-Editor.ps1
-#   .\scripts\Run-Editor.ps1 -RHI Dx11          # workaround NVIDIA D3D12 crashes
+#   .\scripts\Run-Editor.ps1                 # defaults to -dx11 (NVIDIA D3D12 crash workaround)
+#   .\scripts\Run-Editor.ps1 -RHI Dx12       # force D3D12 if needed
+#   .\scripts\Run-Editor.ps1 -RHI Default    # engine default RHI
 #   .\scripts\Run-Editor.ps1 -VerboseLogs
 #   .\scripts\Run-Editor.ps1 -Build
 #   .\scripts\Run-Editor.ps1 -Wait   # block until editor exits
@@ -10,7 +11,7 @@
 param(
     [string]$EngineRoot = "",
     [ValidateSet("Default", "Dx11", "Dx12", "Vulkan")]
-    [string]$RHI = "Default",
+    [string]$RHI = "Dx11",
     [switch]$Build,
     [switch]$VerboseLogs,
     [switch]$Wait,
@@ -59,3 +60,4 @@ if ($Wait) {
 
 Start-Process -FilePath $Editor -ArgumentList $argList.ToArray() -WorkingDirectory $ProjectRoot | Out-Null
 Write-Host "Editor started (detached). Attach VS via .\scripts\Open-VS.ps1 then Debug -> Attach to Process -> UnrealEditor.exe"
+
