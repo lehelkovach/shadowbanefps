@@ -13,8 +13,9 @@ icon sheets, rune atlases, or character art.
 | Ability rune bar | 4 dummy glyphs at screen bottom | `ASBSiegeHUD::DrawAbilityRunes` |
 | World markers | Floating labels: MAIN GATE, COURTYARD, KEEP RUNE, routes | `ASBWorldMarker` |
 | Structure damage colors | Grey → amber → gone | `StructureColor` |
+| Character create panel | Solid dark UMG panel (no Fab art) | `USBCharacterCreateWidget` |
 
-No `.uasset` art required. Engine BasicShapes + dynamic materials + canvas HUD.
+No `.uasset` art required. Engine BasicShapes + dynamic materials + canvas HUD. Character create is a pure-C++ `UUserWidget` (no WBP) with a dark panel and text/buttons — swap for styled chrome later.
 
 ## When to add real art
 
@@ -78,10 +79,10 @@ import.
 
 | Shadowbane race | Use for | Free / freebie option | Notes |
 | --- | --- | --- | --- |
-| **Human** | Ironbrand, Ashwake, Dawnward, Wallwarden | [dReal Warrior Fantasy Character](https://www.fab.com/listings/ec2ce124-b60d-4159-bc1b-989beff7ae4b) (Fab freebie) · UE5 mannequin · [MetaHuman](https://www.unrealengine.com/en-US/metahuman) presets | Best “warrior” silhouette fast |
+| **Human** | Ironbrand, Ashwake, Dawnward, Wallwarden | **ShadowKight** pack in `Content/ShadowKight/` (wired) · [dReal Warrior Fantasy Character](https://www.fab.com/listings/ec2ce124-b60d-4159-bc1b-989beff7ae4b) (Fab freebie) · UE5 mannequin · [MetaHuman](https://www.unrealengine.com/en-US/metahuman) presets | Default dogfood: Manny + `AM_MM_GreystoneSwing_A` (fallback `AM_MM_AxeSwing_01`). `sb.Hero.UseShadowKight 1` → ShadowKight for Human — see `Content/ShadowKight/README.txt`. SK skeleton ≠ UE5 mannequin |
 | **Elf** | Greyfen Warden, Rimebind Wizard | Mixamo stylized characters (Adobe free w/ account) · watch Fab limited-time free elf listings | Full modular elf packs on Fab are usually **paid** |
 | **High Elf** | Nightcoil Assassin | Same humanoid base as Human/Elf + darker / hybrid tint | No unique free half-elf mesh needed for pilot |
-| **Nightshades** | Underlane Scout | Dark hooded / cursed knight freebies e.g. [Cursed Knight UE5](https://sketchfab.com/3d-models/cursed-knight-ue5-character-game-ready-f204e0ad3af645bcb0ecffd9e9ae9a15) (CC-BY) | Lean stealth / shadow silhouette |
+| **Nightshades** | Underlane Scout | Dark hooded / cursed knight freebies e.g. [Cursed Knight UE5](https://sketchfab.com/3d-models/cursed-knight-ue5-character-game-ready-f204e0ad3af645bcb0ecffd9e9ae9a15) (CC-BY) · **[Paragon: Countess](https://www.fab.com/listings/0bf014eb-f2ed-4029-adda-81a855eb5220)** (Epic free) | Countess soft-wired to Nightshades once Fab-migrated — see `Content/Art/Characters/Countess/README.txt`. Paragon skeleton ≠ mannequin |
 | **Dwarf** | Bastion Templar, Breachwright | Search Fab **Price: Free** + “dwarf”; Sketchfab dwarves often **CC-BY-NC** (skip for commercial) | Scarce truly free commercial dwarves — tinted short humanoid is OK interim |
 | **Minotaur** | Future roster / siege bruiser | [Minotaur Berserker](https://sketchfab.com/3d-models/minotaur-berserker-free-game-ready-character-42da47ae59574ed5a6b86b49734294cc) (CC-BY, Mixamo-ready, ~8k tris) | Best free SB-race hit right now |
 | **Centaur** | Future roster | Fab centaur listings are mostly **paid** ($50+) | Watch [Fab free biweekly](https://www.unrealengine.com/fabfreecontent) |
@@ -107,7 +108,13 @@ Content/Art/Characters/
   Dwarf/
   Minotaur/
   Centaur/
+  Countess/          # Paragon soft-path drop / docs (or keep Content/ParagonCountess/)
+Content/ShadowKight/ # Vendored knight pack — Human soft path (see README.txt)
 ```
+
+**Paragon Countess:** soft refs in `SBHeroSkinPaths` + `sb.Hero.UseCountess`. Assets are **not** vendored until Fab Add-to-Project. After migrate, Nightshades (roster key **7**) loads Countess mesh + AnimBP automatically.
+
+**ShadowKight:** vendored under `Content/ShadowKight/`. Soft refs in `SBHeroSkinPaths` + `sb.Hero.UseShadowKight` (default **0** = Manny combat dogfood; set **1** for SK). With CVar 1, Human race (and substrings `shadowkight`/`shadowknight`) load `ShadowknightUE_SK` + preferred `ABP_SK_Melee` / `Anim_ShadowKight`. Melee LMB plays `AM_SK_LibSwing_01` (fallback `AM_SK_SwordSwing_01`). With CVar 0, Manny prefers `AM_MM_GreystoneSwing_A` (then B/C, Steel A, then `AM_MM_AxeSwing_01`) on `ABP_Manny` DefaultSlot — import via `scripts/Import-MannyMeleeFbx.ps1`. See `Content/ShadowKight/README.txt`.
 
 Keep engine BasicShapes until at least one mesh per current roster race is in
 and retargeted — then we wire archetype → skeletal mesh.

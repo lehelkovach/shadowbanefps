@@ -17,6 +17,7 @@ class UProceduralMeshComponent;
 class USkeletalMeshComponent;
 class UAnimMontage;
 class UAnimSequence;
+class UAnimInstance;
 
 /**
  * Shared pilot pawn. Archetype data (stats / role) is applied at spawn so the
@@ -164,7 +165,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh|Melee")
 	TObjectPtr<UStaticMeshComponent> TpAxeBladeMesh;
 
-	/** Imported free sword (skeletal). Preferred over static axe when loaded. */
+	/**
+	 * Imported free sword (skeletal SwordLODS). Preferred over static axe when loaded.
+	 * Attaches DIRECTLY to hero mesh weapon_r / hand_r (SnapToTargetNotIncludingScale) — not via
+	 * TpWeaponPivot (axe Loc/Rot blew sword several feet off the palm).
+	 * SwordLODS blade +Y ~143cm, grip at origin. Defaults Loc (8,1,-2), Rot (0,-90,0), Scale 0.65 —
+	 * tunable via sb.Sword.LocX/Y/Z, RotP/Y/R, Scale (tick applies Relative* only).
+	 * Optional swing polish: sb.Sword.ChopScale * EvalTpSwordChop (default 0 = Greystone owns arc).
+	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mesh|Melee")
 	TObjectPtr<USkeletalMeshComponent> TpSwordMesh;
 
@@ -210,6 +218,12 @@ protected:
 
 	/** True when Epic mannequin skeletal mesh + AnimBP loaded (replaces box body). */
 	bool bUsingHeroMesh = false;
+
+	/** True when Paragon (or other non-mannequin) hero skin is active — skip MM montage / race tint. */
+	bool bUsingParagonHeroMesh = false;
+
+	/** True when ShadowKight pack mesh is active (UE4 bones; prefers AM_SK_LibSwing_01). */
+	bool bUsingShadowKightHeroMesh = false;
 
 	/** Local/cosmetic: FP ADS for bow draw or fireball aim. */
 	bool bFirstPersonAim = false;
@@ -258,8 +272,24 @@ protected:
 	bool bSwingTrailValid = false;
 	TObjectPtr<UAnimMontage> CachedMeleeMontage = nullptr;
 	TObjectPtr<UAnimSequence> CachedMeleeSwingSequence = nullptr;
-	/** True while a skeletal montage/slot anim is driving the swing (skip procedural arm bones). */
+	TObjectPtr<UAnimMontage> CachedMeleeHoldMontage = nullptr;
+	TObjectPtr<UAnimSequence> CachedMeleeHoldSequence = nullptr;
+	/**
+	 * True while a swing montage / dynamic slot montage is active.
+	 * Blocks hold resume while arms are driven by swing.
+	 * ShadowKight never applies ApplyMeleeBodyPose lean (mesh yaw = sideways wobble).
+	 */
 	bool bMeleeMontagePlaying = false;
+	bool bMeleeHoldMontagePlaying = false;
+	/**
+	 * One-shot: when DefaultSlot / montage path fails with sb.Melee.ProceduralChop=0,
+	 * force procedural chop so LMB is never completely dead visually.
+	 */
+	bool bMeleeEmergencyChop = false;
+	bool bLoggedSwordHandSocketMissing = false;
+	bool bLoggedMeleeHoldRestartSkip = false;
+	/** Stamped only AFTER a successful PlayMeleeAttackAnimation (not on debounce entry). */
+	float LastMeleeVisualTime = -1000.f;
 	FDelegateHandle HeroBonesFinalizedHandle;
 	FRotator HeroMeshBaseRelativeRot = FRotator(0.f, -90.f, 0.f);
 
@@ -327,7 +357,8 @@ protected:
 	void ServerInteract();
 
 	/** Cosmetic swing for all peers — damage already applied on server. */
-	UFUNCTION(NetMulticast, Unreliable)
+	/** Reliable so LMB melee feedback is not dropped (visual is gameplay-critical dogfood). */
+	UFUNCTION(NetMulticast, Reliable)
 	void MulticastMeleeSwing();
 
 	UFUNCTION(NetMulticast, Unreliable)
@@ -421,8 +452,16 @@ protected:
 	void SetupHeroMeshForRace();
 	void SetPlaceholderBodyVisible(bool bVisible);
 	void EnsureWeaponInHand();
+	void ApplySwordGripFromCVars();
+	/** Always starts procedural sword/axe chop timer + grip; safe if montage fails. */
+	void StartMeleeSwingVisual();
 	void PlayMeleeAttackAnimation();
+	void OnMeleeSwingMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void EnsureShadowKightMeleeAnimBP();
 	void EnsureMeleeSwingAnimAssets();
+	void EnsureMeleeHoldAnimAssets();
+	void UpdateSwordHoldMontage();
+	void StopSwordHoldMontage();
 	void BindHeroBoneSwingOverlay();
 	void UnbindHeroBoneSwingOverlay();
 	void OnHeroBonesFinalized();

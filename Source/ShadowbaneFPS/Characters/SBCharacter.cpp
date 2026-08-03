@@ -29,7 +29,9 @@
 #include "Core/SBClientDebug.h"
 #include "Art/SBRaceSilhouette.h"
 #include "Art/SBMeleeSwingAnim.h"
+#include "Art/SBHeroSkinPaths.h"
 #include "Art/SBBattleAxeMesh.h"
+#include "HAL/IConsoleManager.h"
 #include "Siege/SBSiegeWeapon.h"
 #include "UI/SBDamageFloat.h"
 #include "Components/SceneComponent.h"
@@ -50,6 +52,120 @@
 #include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerInput.h"
 #include "TimerManager.h"
+
+namespace
+{
+	TAutoConsoleVariable<int32> CVarHeroUseCountess(
+		TEXT("sb.Hero.UseCountess"),
+		1,
+		TEXT("1 = try Paragon Countess soft paths for mapped races when assets exist; 0 = always mannequin."),
+		ECVF_Default);
+
+	TAutoConsoleVariable<FString> CVarHeroCountessRaces(
+		TEXT("sb.Hero.CountessRaces"),
+		TEXT("nightshades,countess"),
+		TEXT("Comma-separated race substrings that load Countess (case-insensitive)."),
+		ECVF_Default);
+
+	TAutoConsoleVariable<int32> CVarHeroUseShadowKight(
+		TEXT("sb.Hero.UseShadowKight"),
+		0,
+		TEXT("0 = Manny/Quinn + AM_MM_GreystoneSwing_* (fallback AxeSwing). 1 = ShadowKight LibSwing for mapped races."),
+		ECVF_Default);
+
+	TAutoConsoleVariable<FString> CVarHeroShadowKightRaces(
+		TEXT("sb.Hero.ShadowKightRaces"),
+		TEXT("human,shadowkight,shadowknight"),
+		TEXT("Comma-separated race substrings that load ShadowKight (case-insensitive). Default: Human dogfood."),
+		ECVF_Default);
+
+	// Live sword grip tuning. Tick applies Relative* only (no re-Attach).
+	// PIE: sb.Sword.LocX 10 | sb.Sword.RotY -90 | sb.Sword.ChopScale 0.2 etc.
+	//
+	// Attach: TpSwordMesh DIRECTLY on hero hand_r / weapon_r (NOT TpWeaponPivot).
+	// SwordLODS: blade along +Y (~143cm), grip/pommel at origin (Y≈0).
+	// Manny hand_r: +X toward fingers — Yaw -90 maps mesh +Y → hand +X (tip out of palm).
+	// LocX ~8 seats hilt from wrist bone into palm center (not knuckles / not floating).
+	// Greystone body montage already carries the hand — keep ChopScale 0 so relative
+	// grip stays planted; torso lean still uses sb.Melee.ProceduralChop.
+	TAutoConsoleVariable<float> CVarSwordLocX(
+		TEXT("sb.Sword.LocX"), 8.f,
+		TEXT("Sword mesh relative Loc X (cm) on hand. Wrist→palm along fingers."), ECVF_Default);
+	TAutoConsoleVariable<float> CVarSwordLocY(
+		TEXT("sb.Sword.LocY"), 1.f,
+		TEXT("Sword mesh relative Loc Y (cm) on hand. Lateral (thumb/pinky)."), ECVF_Default);
+	TAutoConsoleVariable<float> CVarSwordLocZ(
+		TEXT("sb.Sword.LocZ"), -2.f,
+		TEXT("Sword mesh relative Loc Z (cm) on hand. Into palm (away from knuckles)."), ECVF_Default);
+	TAutoConsoleVariable<float> CVarSwordRotP(
+		TEXT("sb.Sword.RotP"), 0.f,
+		TEXT("Sword mesh relative Pitch (degrees)."), ECVF_Default);
+	TAutoConsoleVariable<float> CVarSwordRotY(
+		TEXT("sb.Sword.RotY"), -90.f,
+		TEXT("Sword mesh relative Yaw (degrees). -90 = SwordLODS +Y tip along hand +X."), ECVF_Default);
+	TAutoConsoleVariable<float> CVarSwordRotR(
+		TEXT("sb.Sword.RotR"), 0.f,
+		TEXT("Sword mesh relative Roll (degrees). Try ±90 if blade edge faces wrong."), ECVF_Default);
+	TAutoConsoleVariable<float> CVarSwordScale(
+		TEXT("sb.Sword.Scale"), 0.65f,
+		TEXT("Sword mesh uniform scale. SwordLODS ~143cm; 0.65 ≈ one-hand readable vs Greystone."), ECVF_Default);
+	TAutoConsoleVariable<float> CVarSwordChopScale(
+		TEXT("sb.Sword.ChopScale"), 0.f,
+		TEXT("Scales EvalTpSwordChop added to grip Rot (0=Greystone owns arc; 0.2–1=extra blade polish)."), ECVF_Default);
+
+	/** Procedural sword/torso chop layered on body montage (readable LMB dogfood). */
+	TAutoConsoleVariable<int32> CVarMeleeProceduralChop(
+		TEXT("sb.Melee.ProceduralChop"),
+		1,
+		TEXT("1 = procedural pivot + torso lean with body montage (default). 0 = montage-only isolate. Sword relative chop uses sb.Sword.ChopScale."),
+		ECVF_Default);
+
+	bool IsMeleeProceduralChopEnabled()
+	{
+		return CVarMeleeProceduralChop.GetValueOnGameThread() != 0;
+	}
+
+	bool IsMannyPreferredSwingName(const FString& N)
+	{
+		return N.Contains(TEXT("GreystoneSwing"))
+			|| N.Contains(TEXT("SteelSwing"))
+			|| N.Contains(TEXT("SerathSwing"))
+			|| N.Contains(TEXT("AxeSwing"));
+	}
+
+	bool RaceMapsToTokens(const FString& RaceLower, const FString& CommaSeparatedTokens)
+	{
+		TArray<FString> Tokens;
+		CommaSeparatedTokens.ParseIntoArray(Tokens, TEXT(","), true);
+		for (FString& Token : Tokens)
+		{
+			Token.TrimStartAndEndInline();
+			if (!Token.IsEmpty() && RaceLower.Contains(Token.ToLower()))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool RaceMapsToCountess(const FString& RaceLower)
+	{
+		if (CVarHeroUseCountess.GetValueOnGameThread() == 0)
+		{
+			return false;
+		}
+		return RaceMapsToTokens(RaceLower, CVarHeroCountessRaces.GetValueOnGameThread());
+	}
+
+	bool RaceMapsToShadowKight(const FString& RaceLower)
+	{
+		if (CVarHeroUseShadowKight.GetValueOnGameThread() == 0)
+		{
+			return false;
+		}
+		return RaceMapsToTokens(RaceLower, CVarHeroShadowKightRaces.GetValueOnGameThread());
+	}
+}
 
 ASBCharacter::ASBCharacter()
 {
@@ -162,13 +278,19 @@ ASBCharacter::ASBCharacter()
 	TpAxeBladeMesh->SetHiddenInGame(true);
 
 	TpSwordMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("TpSwordMesh"));
+	// Temporary parent until EnsureWeaponInHand reparents directly to hand_r.
 	TpSwordMesh->SetupAttachment(TpWeaponPivot);
 	TpSwordMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	TpSwordMesh->SetGenerateOverlapEvents(false);
+	TpSwordMesh->SetSimulatePhysics(false);
+	TpSwordMesh->SetEnableGravity(false);
 	TpSwordMesh->SetCastShadow(true);
 	TpSwordMesh->SetHiddenInGame(true);
-	TpSwordMesh->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
-	TpSwordMesh->SetRelativeRotation(FRotator(0.f, 0.f, 0.f));
-	TpSwordMesh->SetRelativeScale3D(FVector(1.f));
+	// Palm grip defaults — CVars re-applied each tick (Relative only).
+	// SwordLODS +Y blade → hand +X (Yaw -90); LocX seats hilt in palm from wrist.
+	TpSwordMesh->SetRelativeLocation(FVector(8.f, 1.f, -2.f));
+	TpSwordMesh->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
+	TpSwordMesh->SetRelativeScale3D(FVector(0.65f));
 
 	TpBattleAxe = CreateDefaultSubobject<UProceduralMeshComponent>(TEXT("TpBattleAxe"));
 	TpBattleAxe->SetupAttachment(TpWeaponPivot);
@@ -254,6 +376,7 @@ ASBCharacter::ASBCharacter()
 		Hero->SetRelativeRotation(FRotator(0.f, -90.f, 0.f));
 		Hero->bOwnerNoSee = false;
 		Hero->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+		Hero->bNoSkeletonUpdate = false;
 
 		if (MannyMesh.Succeeded())
 		{
@@ -283,7 +406,7 @@ void ASBCharacter::BeginPlay()
 	}
 	UpdatePlaceholderVisuals();
 	EnsureMeleeSwingAnimAssets();
-	BindHeroBoneSwingOverlay();
+	// Procedural CS bone overlay disabled — caused EditableBoneVisibilityStates assert / crash.
 
 	// AnimBP / mesh init can stomp materials on the first frames — re-tint shortly after.
 	if (UWorld* World = GetWorld())
@@ -295,7 +418,7 @@ void ASBCharacter::BeginPlay()
 
 void ASBCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	UnbindHeroBoneSwingOverlay();
+	UnbindHeroBoneSwingOverlay(); // no-op unless a prior build left a handle
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -530,9 +653,20 @@ void ASBCharacter::Tick(float DeltaSeconds)
 		RuneDisc->SetRelativeScale3D(FVector(Pulse, Pulse, 0.08f));
 	}
 
+	// Grip first (base Loc/Rot from CVars), then swing visual layers chop on sword + pivots.
+	if (TpSwordMesh && !TpSwordMesh->bHiddenInGame && TpSwordMesh->GetSkeletalMeshAsset())
+	{
+		ApplySwordGripFromCVars();
+	}
+
 	if (WeaponMesh || TpWeaponMesh || TpSwordMesh)
 	{
 		TickMeleeSwingVisual(DeltaSeconds);
+	}
+
+	if (TpSwordMesh && !TpSwordMesh->bHiddenInGame && TpSwordMesh->GetSkeletalMeshAsset())
+	{
+		UpdateSwordHoldMontage();
 	}
 
 	if (IsLocallyControlled())
@@ -746,6 +880,13 @@ void ASBCharacter::LookUp(float Value)
 
 void ASBCharacter::OnFirePressed()
 {
+	// Local predict: never wait on Server→Multicast for the sword to move.
+	// Authority still validates stamina/interval in PerformAttack.
+	if (IsLocallyControlled() && !bDead && bUsesMelee && !bBowEquipped
+		&& Stamina >= MeleeStaminaCost)
+	{
+		PlayMeleeAttackAnimation();
+	}
 	ServerFire();
 }
 
@@ -834,6 +975,12 @@ void ASBCharacter::PerformAttack()
 	{
 		if (Stamina < MeleeStaminaCost)
 		{
+			UE_LOG(LogShadowbaneCombat, Log, TEXT("%s LMB melee BLOCKED — stamina %.1f < cost %.1f"),
+				*GetName(), Stamina, MeleeStaminaCost);
+			if (IsLocallyControlled())
+			{
+				FSBClientDebug::PushMessage(TEXT("Melee blocked — low stamina"), 1.5f);
+			}
 			return;
 		}
 		Stamina = FMath::Max(0.f, Stamina - MeleeStaminaCost);
@@ -850,11 +997,7 @@ void ASBCharacter::PerformAttack()
 
 void ASBCharacter::MulticastMeleeSwing_Implementation()
 {
-	MeleeSwingAnimDuration = SBMeleeSwingAnim::DurationSeconds;
-	MeleeSwingAnimRemaining = MeleeSwingAnimDuration;
-	bSwingTrailValid = false;
-	EnsureWeaponInHand();
-	UpdateWeaponVisibility();
+	// PlayMeleeAttackAnimation always StartMeleeSwingVisual (procedural chop) first.
 	PlayMeleeAttackAnimation();
 }
 
@@ -1766,36 +1909,143 @@ void ASBCharacter::UpdateWeaponVisibility()
 	{
 		EnsureWeaponInHand();
 	}
+	else
+	{
+		StopSwordHoldMontage();
+	}
+}
+
+void ASBCharacter::ApplySwordGripFromCVars()
+{
+	if (!TpSwordMesh || !TpSwordMesh->GetSkeletalMeshAsset())
+	{
+		return;
+	}
+	const float LocX = CVarSwordLocX.GetValueOnGameThread();
+	const float LocY = CVarSwordLocY.GetValueOnGameThread();
+	const float LocZ = CVarSwordLocZ.GetValueOnGameThread();
+	const float RotP = CVarSwordRotP.GetValueOnGameThread();
+	const float RotY = CVarSwordRotY.GetValueOnGameThread();
+	const float RotR = CVarSwordRotR.GetValueOnGameThread();
+	const float Scale = CVarSwordScale.GetValueOnGameThread();
+	const float ChopScale = CVarSwordChopScale.GetValueOnGameThread();
+
+	// Grip Loc/base Rot always from CVars — never let chop translate the hilt out of palm.
+	FRotator GripRot(RotP, RotY, RotR);
+	// Optional additive blade polish. Default ChopScale 0: Greystone/Manny body montage
+	// owns the front-of-body arc; full EvalTpSwordChop previously warped tip through torso.
+	if (ChopScale > KINDA_SMALL_NUMBER
+		&& MeleeSwingAnimRemaining > 0.f
+		&& (IsMeleeProceduralChopEnabled() || bMeleeEmergencyChop))
+	{
+		const float Alpha = 1.f - (MeleeSwingAnimRemaining / FMath::Max(MeleeSwingAnimDuration, KINDA_SMALL_NUMBER));
+		const FRotator Chop = SBMeleeSwingAnim::EvalTpSwordChop(Alpha);
+		GripRot = FRotator(
+			GripRot.Pitch + Chop.Pitch * ChopScale,
+			GripRot.Yaw + Chop.Yaw * ChopScale,
+			GripRot.Roll + Chop.Roll * ChopScale);
+	}
+
+	TpSwordMesh->SetRelativeLocation(FVector(LocX, LocY, LocZ));
+	TpSwordMesh->SetRelativeRotation(GripRot);
+	TpSwordMesh->SetRelativeScale3D(FVector(Scale));
 }
 
 void ASBCharacter::EnsureWeaponInHand()
 {
 	USkeletalMeshComponent* Hero = GetMesh();
-	if (!Hero || !TpWeaponPivot)
+	if (!Hero)
 	{
 		return;
 	}
 
-	static const FName HandSockets[] = {
+	const bool bHasSword = TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset() != nullptr;
+
+	// --- Sword: TpSwordMesh DIRECTLY on hero hand (identity parent chain) ---
+	if (bHasSword)
+	{
+		// Prefer weapon_r when present (often palm-authored); else hand_r bone.
+		static const FName SwordHandSockets[] = {
+			FName(TEXT("weapon_r")),
+			FName(TEXT("Weapon_R")),
+			FName(TEXT("weapon_socket_r")),
+			FName(TEXT("hand_r")),
+			FName(TEXT("Hand_R")),
+			FName(TEXT("RightHand")),
+			FName(TEXT("ik_hand_gun")),
+			FName(TEXT("hand_r_socket"))
+		};
+
+		TpSwordMesh->SetSimulatePhysics(false);
+		TpSwordMesh->SetEnableGravity(false);
+		TpSwordMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		TpSwordMesh->SetGenerateOverlapEvents(false);
+		TpSwordMesh->SetCastShadow(true);
+
+		FName FoundSocket = NAME_None;
+		for (const FName& Socket : SwordHandSockets)
+		{
+			if (Hero->DoesSocketExist(Socket))
+			{
+				FoundSocket = Socket;
+				break;
+			}
+		}
+
+		if (FoundSocket.IsNone())
+		{
+			if (!bLoggedSwordHandSocketMissing)
+			{
+				UE_LOG(LogShadowbaneCombat, Warning,
+					TEXT("%s sword hand socket missing (hand_r etc.) — attaching to mesh root"),
+					*GetName());
+				bLoggedSwordHandSocketMissing = true;
+			}
+			if (TpSwordMesh->GetAttachParent() != Hero || !TpSwordMesh->GetAttachSocketName().IsNone())
+			{
+				TpSwordMesh->AttachToComponent(Hero, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+			}
+		}
+		else if (TpSwordMesh->GetAttachParent() != Hero || TpSwordMesh->GetAttachSocketName() != FoundSocket)
+		{
+			// NOT IncludingScale — hero non-uniform race scale was blowing mesh up/off.
+			// NOT via TpWeaponPivot — axe Rot(0,90,10)+Loc compounded into multi-foot world gap.
+			TpSwordMesh->AttachToComponent(
+				Hero, FAttachmentTransformRules::SnapToTargetNotIncludingScale, FoundSocket);
+		}
+
+		ApplySwordGripFromCVars();
+		UpdateSwordHoldMontage();
+		return;
+	}
+
+	// --- Axe path: TpWeaponPivot on weapon_r / hand_r ---
+	if (!TpWeaponPivot)
+	{
+		return;
+	}
+
+	static const FName AxeHandSockets[] = {
 		FName(TEXT("weapon_r")),
+		FName(TEXT("Weapon_R")),
 		FName(TEXT("hand_r")),
 		FName(TEXT("Hand_R")),
+		FName(TEXT("RightHand")),
 		FName(TEXT("ik_hand_gun")),
-		FName(TEXT("hand_r_socket"))
+		FName(TEXT("hand_r_socket")),
+		FName(TEXT("weapon_socket_r"))
 	};
 
 	bool bAttached = false;
-	for (const FName& Socket : HandSockets)
+	for (const FName& Socket : AxeHandSockets)
 	{
 		if (Hero->DoesSocketExist(Socket))
 		{
 			if (TpWeaponPivot->GetAttachParent() != Hero || TpWeaponPivot->GetAttachSocketName() != Socket)
 			{
-				TpWeaponPivot->AttachToComponent(Hero, FAttachmentTransformRules::SnapToTargetNotIncludingScale, Socket);
+				TpWeaponPivot->AttachToComponent(
+					Hero, FAttachmentTransformRules::SnapToTargetNotIncludingScale, Socket);
 			}
-			// Grip pose: haft along palm, blade out.
-			TpWeaponPivot->SetRelativeLocation(FVector(-2.f, 8.f, 3.f));
-			TpWeaponPivot->SetRelativeRotation(FRotator(0.f, 90.f, 10.f));
 			bAttached = true;
 			break;
 		}
@@ -1807,32 +2057,29 @@ void ASBCharacter::EnsureWeaponInHand()
 		TpWeaponPivot->SetRelativeLocation(FVector(25.f, 40.f, 35.f));
 		TpWeaponPivot->SetRelativeRotation(FRotator(-20.f, 0.f, 15.f));
 	}
-
-	const bool bHasSword = TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset() != nullptr;
-	if (bHasSword)
+	else
 	{
-		// SwordLODS: grip near mesh origin; blade often along local +Y after FBX import.
-		// Pitch/roll offsets vs axe — tune in PIE if tip/guard look wrong.
-		TpSwordMesh->SetRelativeLocation(FVector(-1.f, 4.f, 1.f));
-		TpSwordMesh->SetRelativeRotation(FRotator(-90.f, 0.f, 90.f));
-		TpSwordMesh->SetRelativeScale3D(FVector(1.f));
-		TpSwordMesh->SetCastShadow(true);
+		// Axe grip pivot — swing anim offsets from (0,90,10).
+		TpWeaponPivot->SetRelativeLocation(FVector(-2.f, 8.f, 3.f));
+		if (MeleeSwingAnimRemaining <= 0.f)
+		{
+			TpWeaponPivot->SetRelativeRotation(FRotator(0.f, 90.f, 10.f));
+		}
 	}
-	else if (TpWeaponMesh)
+
+	if (TpWeaponMesh)
 	{
 		UStaticMesh* WeaponStatic = TpWeaponMesh->GetStaticMesh();
 		const FString Path = WeaponStatic ? WeaponStatic->GetPathName() : FString();
 		const bool bImported = WeaponStatic && !Path.Contains(TEXT("BasicShapes"));
 		if (bImported && Path.Contains(TEXT("SM_BattleAxe")))
 		{
-			// Generated battle axe: haft along +Z (~105cm), blade on +X.
 			TpWeaponMesh->SetRelativeLocation(FVector(0.f, 0.f, -8.f));
 			TpWeaponMesh->SetRelativeRotation(FRotator(0.f, 0.f, -10.f));
 			TpWeaponMesh->SetRelativeScale3D(FVector(0.9f, 0.9f, 0.9f));
 		}
 		else if (bImported)
 		{
-			// Kenney handaxe: grip near origin — scale up from ~1uu source.
 			TpWeaponMesh->SetRelativeLocation(FVector(2.f, 0.f, 4.f));
 			TpWeaponMesh->SetRelativeRotation(FRotator(-90.f, 0.f, 90.f));
 			TpWeaponMesh->SetRelativeScale3D(FVector(18.f, 18.f, 18.f));
@@ -1858,76 +2105,799 @@ void ASBCharacter::EnsureWeaponInHand()
 	}
 }
 
+void ASBCharacter::EnsureShadowKightMeleeAnimBP()
+{
+	USkeletalMeshComponent* Hero = GetMesh();
+	if (!Hero || !bUsingShadowKightHeroMesh)
+	{
+		return;
+	}
+
+	Hero->bPauseAnims = false;
+	Hero->bNoSkeletonUpdate = false;
+	if (Hero->GetAnimationMode() != EAnimationMode::AnimationBlueprint)
+	{
+		Hero->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+	}
+
+	// Prefer ABP_SK_Melee (DefaultSlot after loco, no Control Rig). Fallback
+	// Anim_ShadowKight via TryLoadShadowKightAnimClass candidate list.
+	// Never leave the mesh in single-node PlayAnimation mode — freezes loco.
+	UClass* Desired = SBHeroSkinPaths::TryLoadShadowKightAnimClass();
+	if (!Desired)
+	{
+		UE_LOG(LogShadowbaneCombat, Log,
+			TEXT("%s EnsureShadowKightMeleeAnimBP — NO AnimBP (ABP_SK_Melee / Anim_ShadowKight missing)"),
+			*GetName());
+		return;
+	}
+
+	const UClass* Current = Hero->GetAnimClass();
+	const bool bNeedSwap = (Current != Desired) || (Hero->GetAnimInstance() == nullptr);
+	if (bNeedSwap)
+	{
+		Hero->SetAnimInstanceClass(Desired);
+		UE_LOG(LogShadowbaneCombat, Log,
+			TEXT("%s EnsureShadowKightMeleeAnimBP -> %s"),
+			*GetName(), *GetNameSafe(Desired));
+	}
+}
+
+void ASBCharacter::StartMeleeSwingVisual()
+{
+	bSwingTrailValid = false;
+	EnsureWeaponInHand();
+	UpdateWeaponVisibility();
+
+	if (TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset())
+	{
+		// Force sword readable even if a prior hide raced replication.
+		if (bUsesMelee && !bBowEquipped)
+		{
+			TpSwordMesh->SetHiddenInGame(false);
+			TpSwordMesh->SetVisibility(true, true);
+			TpSwordMesh->SetOwnerNoSee(false);
+		}
+		ApplySwordGripFromCVars();
+	}
+
+	const bool bChop = IsMeleeProceduralChopEnabled();
+	if (!bChop)
+	{
+		UE_LOG(LogShadowbaneCombat, Log,
+			TEXT("%s MELEE VISUAL START chop=off (sb.Melee.ProceduralChop=0) sk=%d sword=%d"),
+			*GetName(),
+			bUsingShadowKightHeroMesh ? 1 : 0,
+			(TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset() && !TpSwordMesh->bHiddenInGame) ? 1 : 0);
+		if (IsLocallyControlled())
+		{
+			FSBClientDebug::PushMessage(TEXT("MELEE SWING"), 0.8f);
+		}
+		return;
+	}
+
+	// Guaranteed visible feedback: procedural sword/axe chop on every melee LMB.
+	MeleeSwingAnimDuration = SBMeleeSwingAnim::DurationSeconds;
+	MeleeSwingAnimRemaining = MeleeSwingAnimDuration;
+	// Nudge off alpha=0 (EvalTp* idle) so the first applied pose already chops.
+	MeleeSwingAnimRemaining = FMath::Max(0.01f, MeleeSwingAnimRemaining - 0.02f);
+	if (TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset())
+	{
+		ApplySwordGripFromCVars();
+	}
+	if (TpWeaponPivot)
+	{
+		const float Alpha = 1.f - (MeleeSwingAnimRemaining / FMath::Max(MeleeSwingAnimDuration, KINDA_SMALL_NUMBER));
+		const FRotator Chop = SBMeleeSwingAnim::EvalTpPivot(Alpha);
+		TpWeaponPivot->SetRelativeRotation(FRotator(Chop.Pitch, 90.f + Chop.Yaw, Chop.Roll + 10.f));
+	}
+	if (FpWeaponPivot)
+	{
+		const float Alpha = 1.f - (MeleeSwingAnimRemaining / FMath::Max(MeleeSwingAnimDuration, KINDA_SMALL_NUMBER));
+		FpWeaponPivot->SetRelativeRotation(SBMeleeSwingAnim::EvalFpPivot(Alpha));
+	}
+
+	UE_LOG(LogShadowbaneCombat, Log,
+		TEXT("%s MELEE VISUAL START procedural chop remaining=%.2fs sk=%d sword=%d melee=%d bow=%d"),
+		*GetName(),
+		MeleeSwingAnimRemaining,
+		bUsingShadowKightHeroMesh ? 1 : 0,
+		(TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset() && !TpSwordMesh->bHiddenInGame) ? 1 : 0,
+		bUsesMelee ? 1 : 0,
+		bBowEquipped ? 1 : 0);
+	if (IsLocallyControlled())
+	{
+		FSBClientDebug::PushMessage(TEXT("MELEE SWING"), 0.8f);
+	}
+}
+
 void ASBCharacter::PlayMeleeAttackAnimation()
 {
+	// Debounce duplicates (Enhanced Input + Multicast) ONLY after a successful play stamps
+	// LastMeleeVisualTime. Never stamp on entry — that rejected Multicast with dt=0 and left
+	// observers seeing only debounce Warnings while body montage never ran.
+	UWorld* World = GetWorld();
+	const float Now = World ? World->GetTimeSeconds() : 0.f;
 	EnsureMeleeSwingAnimAssets();
-	bMeleeMontagePlaying = false;
+	const bool bChop = IsMeleeProceduralChopEnabled() || bMeleeEmergencyChop;
+	// LibSwing ~1.7s; Greystone Paragon swings ~1–2s — short debounce restarted mid-swing.
+	const float MeleeVisualDebounceSeconds = bUsingShadowKightHeroMesh
+		? 1.65f
+		: (CachedMeleeMontage && IsMannyPreferredSwingName(CachedMeleeMontage->GetName())
+			&& !CachedMeleeMontage->GetName().Contains(TEXT("AxeSwing"))
+				? 1.20f
+				: 0.35f);
+	if (World && (Now - LastMeleeVisualTime) < MeleeVisualDebounceSeconds)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("%s PlayMeleeAttackAnimation debounced (dt=%.3f < %.2f) — duplicate after success"),
+			*GetName(), Now - LastMeleeVisualTime, MeleeVisualDebounceSeconds);
+		return;
+	}
+
+	auto MarkMeleeVisualSuccess = [this, World]()
+	{
+		if (World)
+		{
+			LastMeleeVisualTime = World->GetTimeSeconds();
+		}
+	};
+
+	auto MontageKind = [](const UAnimMontage* M) -> const TCHAR*
+	{
+		if (!M)
+		{
+			return TEXT("null");
+		}
+		const FString N = M->GetName();
+		if (N.Contains(TEXT("LibSwing")))
+		{
+			return TEXT("LibSwing");
+		}
+		if (N.Contains(TEXT("SwordSwing")))
+		{
+			return TEXT("SwordSwing");
+		}
+		if (N.Contains(TEXT("GreystoneSwing")))
+		{
+			return TEXT("GreystoneSwing");
+		}
+		if (N.Contains(TEXT("SteelSwing")))
+		{
+			return TEXT("SteelSwing");
+		}
+		if (N.Contains(TEXT("SerathSwing")))
+		{
+			return TEXT("SerathSwing");
+		}
+		if (N.Contains(TEXT("AxeSwing")))
+		{
+			return TEXT("AxeSwing");
+		}
+		return TEXT("other");
+	};
+
+	auto SequenceKind = [](const UAnimSequence* S) -> const TCHAR*
+	{
+		if (!S)
+		{
+			return TEXT("null");
+		}
+		const FString N = S->GetName();
+		if (N.Contains(TEXT("LibSwing")))
+		{
+			return TEXT("LibSwing");
+		}
+		if (N.Contains(TEXT("SwordSwing")))
+		{
+			return TEXT("SwordSwing");
+		}
+		if (N.Contains(TEXT("GreystoneSwing")))
+		{
+			return TEXT("GreystoneSwing");
+		}
+		if (N.Contains(TEXT("SteelSwing")))
+		{
+			return TEXT("SteelSwing");
+		}
+		if (N.Contains(TEXT("SerathSwing")))
+		{
+			return TEXT("SerathSwing");
+		}
+		if (N.Contains(TEXT("AxeSwing")))
+		{
+			return TEXT("AxeSwing");
+		}
+		return TEXT("other");
+	};
 
 	USkeletalMeshComponent* Hero = GetMesh();
-	UAnimInstance* Anim = Hero ? Hero->GetAnimInstance() : nullptr;
-	if (Anim && bUsingHeroMesh)
+	UAnimInstance* AnimInstEarly = Hero ? Hero->GetAnimInstance() : nullptr;
+
+	// Don't restart body montage until the current LibSwing/SwordSwing finishes.
+	const bool bMontageStillPlaying = bMeleeMontagePlaying
+		|| (AnimInstEarly && CachedMeleeMontage && AnimInstEarly->Montage_IsPlaying(CachedMeleeMontage))
+		|| (AnimInstEarly && CachedMeleeMontage == nullptr && AnimInstEarly->IsAnyMontagePlaying()
+			&& !bMeleeHoldMontagePlaying);
+	if (bMontageStillPlaying)
 	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("%s ISOLATE: chop=%s montage=%s playing — skip Montage_Play restart"),
+			*GetName(),
+			bChop ? TEXT("on") : TEXT("off"),
+			MontageKind(CachedMeleeMontage));
+		return;
+	}
+	// Procedural-chop window still active (non-isolate): skip restarting the short chop.
+	if (bChop && MeleeSwingAnimRemaining > 0.05f)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("%s ISOLATE: chop=on remaining=%.2fs — skip restart"),
+			*GetName(), MeleeSwingAnimRemaining);
+		return;
+	}
+
+	// Body montage is priority; procedural sword chop is optional polish (sb.Melee.ProceduralChop).
+	StartMeleeSwingVisual();
+	bMeleeMontagePlaying = false;
+	StopSwordHoldMontage();
+
+	if (!Hero)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("%s PlayMeleeAttackAnimation — no hero mesh; chop=%s"),
+			*GetName(), bChop ? TEXT("on") : TEXT("off"));
+		if (bChop)
+		{
+			ApplyMeleeBodyPose(0.05f);
+		}
+		MarkMeleeVisualSuccess();
+		return;
+	}
+
+	if (bUsingShadowKightHeroMesh)
+	{
+		EnsureShadowKightMeleeAnimBP();
+	}
+
+	// Re-fetch after EnsureShadowKightMeleeAnimBP may have swapped the class.
+	UAnimInstance* AnimInst = Hero->GetAnimInstance();
+	UE_LOG(LogTemp, Warning,
+		TEXT("%s melee play begin AnimBP=%s AnimInst=%s sk=%d chop=%d montage=%s(%s) seq=%s(%s)"),
+		*GetName(),
+		*GetNameSafe(Hero->GetAnimClass()),
+		*GetNameSafe(AnimInst),
+		bUsingShadowKightHeroMesh ? 1 : 0,
+		bChop ? 1 : 0,
+		*GetNameSafe(CachedMeleeMontage),
+		MontageKind(CachedMeleeMontage),
+		*GetNameSafe(CachedMeleeSwingSequence),
+		SequenceKind(CachedMeleeSwingSequence));
+	if (AnimInst)
+	{
+		if (CachedMeleeHoldMontage && AnimInst->Montage_IsPlaying(CachedMeleeHoldMontage))
+		{
+			AnimInst->Montage_Stop(0.05f, CachedMeleeHoldMontage);
+		}
+	}
+	bMeleeHoldMontagePlaying = false;
+
+	if (!AnimInst)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("%s body montage failed — no AnimInstance; chop=%s"),
+			*GetName(), bChop ? TEXT("on/RUNNING") : TEXT("off"));
+		if (bChop)
+		{
+			ApplyMeleeBodyPose(0.05f);
+		}
+		MarkMeleeVisualSuccess();
+		return;
+	}
+
+	auto BeginMontageSwingTiming = [this, bChop](float PlayedSeconds)
+	{
+		bMeleeMontagePlaying = true;
+		// Only drive procedural remaining when chop is on. Do NOT stretch Alpha over
+		// Montage_Play length (Alpha stayed ~0 → sword looked dead).
+		if (bChop && MeleeSwingAnimRemaining <= 0.f)
+		{
+			MeleeSwingAnimDuration = SBMeleeSwingAnim::DurationSeconds;
+			MeleeSwingAnimRemaining = MeleeSwingAnimDuration;
+		}
+		(void)PlayedSeconds;
+	};
+
+	// --- ShadowKight: Montage_Play(AM_SK_LibSwing_01 preferred, else AM_SK_SwordSwing_01) ---
+	if (bUsingShadowKightHeroMesh)
+	{
+		if (!CachedMeleeMontage)
+		{
+			UE_LOG(LogTemp, Error,
+				TEXT("%s ShadowKight melee montage missing (tried LibSwing then SwordSwing)"),
+				*GetName());
+		}
+		if (!CachedMeleeSwingSequence)
+		{
+			UE_LOG(LogTemp, Error,
+				TEXT("%s ShadowKight melee sequence missing (tried LibSwing then SwordSwing)"),
+				*GetName());
+		}
+
 		if (CachedMeleeMontage)
 		{
-			const float Len = Anim->Montage_Play(CachedMeleeMontage, 1.f);
-			if (Len > 0.f)
+			if (USkeleton* MontSkel = CachedMeleeMontage->GetSkeleton())
 			{
-				bMeleeMontagePlaying = true;
-				MeleeSwingAnimDuration = Len;
-				MeleeSwingAnimRemaining = Len;
-				UE_LOG(LogShadowbaneCombat, Verbose, TEXT("%s melee montage %.2fs"), *GetName(), Len);
+				USkeleton* MeshSkel = Hero->GetSkeletalMeshAsset()
+					? Hero->GetSkeletalMeshAsset()->GetSkeleton()
+					: nullptr;
+				UE_LOG(LogTemp, Warning,
+					TEXT("%s montage=%s kind=%s skel=%s mesh skel=%s match=%d"),
+					*GetName(),
+					*GetNameSafe(CachedMeleeMontage),
+					MontageKind(CachedMeleeMontage),
+					*GetNameSafe(MontSkel),
+					*GetNameSafe(MeshSkel),
+					(MontSkel == MeshSkel) ? 1 : 0);
+			}
+			const float Played = AnimInst->Montage_Play(CachedMeleeMontage, 1.f);
+			if (Played > 0.f)
+			{
+				BeginMontageSwingTiming(Played);
+				FOnMontageEnded EndDelegate;
+				EndDelegate.BindUObject(this, &ASBCharacter::OnMeleeSwingMontageEnded);
+				AnimInst->Montage_SetEndDelegate(EndDelegate, CachedMeleeMontage);
+				UE_LOG(LogTemp, Warning,
+					TEXT("%s ISOLATE: chop=%s montage=%s playing (%.2fs) AnimBP=%s"),
+					*GetName(),
+					bChop ? TEXT("on") : TEXT("off"),
+					MontageKind(CachedMeleeMontage),
+					Played,
+					*GetNameSafe(Hero->GetAnimClass()));
+				MarkMeleeVisualSuccess();
 				return;
 			}
+
+			UE_LOG(LogTemp, Error,
+				TEXT("%s body montage failed — Montage_Play returned 0 for %s kind=%s AnimBP=%s"),
+				*GetName(), *GetNameSafe(CachedMeleeMontage), MontageKind(CachedMeleeMontage),
+				*GetNameSafe(Hero->GetAnimClass()));
 		}
 
 		if (CachedMeleeSwingSequence)
 		{
-			UAnimMontage* Dyn = Anim->PlaySlotAnimationAsDynamicMontage(
+			static const FName DefaultSlot(TEXT("DefaultSlot"));
+			UAnimMontage* Dyn = AnimInst->PlaySlotAnimationAsDynamicMontage(
 				CachedMeleeSwingSequence,
-				FName(TEXT("DefaultSlot")),
+				DefaultSlot,
 				0.05f,
 				0.12f,
 				1.f,
 				1);
 			if (Dyn)
 			{
-				bMeleeMontagePlaying = true;
-				const float Len = Dyn->GetPlayLength();
-				if (Len > KINDA_SMALL_NUMBER)
-				{
-					MeleeSwingAnimDuration = Len;
-					MeleeSwingAnimRemaining = Len;
-				}
-				UE_LOG(LogShadowbaneCombat, Verbose, TEXT("%s melee slot sequence %.2fs"), *GetName(), Len);
+				const float PlayLen = FMath::Max(Dyn->GetPlayLength(), SBMeleeSwingAnim::DurationSeconds);
+				BeginMontageSwingTiming(PlayLen);
+				FOnMontageEnded EndDelegate;
+				EndDelegate.BindUObject(this, &ASBCharacter::OnMeleeSwingMontageEnded);
+				AnimInst->Montage_SetEndDelegate(EndDelegate, Dyn);
+				UE_LOG(LogTemp, Warning,
+					TEXT("%s ISOLATE: chop=%s montage=%s playing via dynamic slot (%.2fs) AnimBP=%s"),
+					*GetName(),
+					bChop ? TEXT("on") : TEXT("off"),
+					SequenceKind(CachedMeleeSwingSequence),
+					PlayLen, *GetNameSafe(Hero->GetAnimClass()));
+				MarkMeleeVisualSuccess();
 				return;
 			}
+
+			UE_LOG(LogTemp, Error,
+				TEXT("%s dynamic slot FAILED %s kind=%s AnimBP=%s — chop=%s"),
+				*GetName(), *GetNameSafe(CachedMeleeSwingSequence), SequenceKind(CachedMeleeSwingSequence),
+				*GetNameSafe(Hero->GetAnimClass()), bChop ? TEXT("on only") : TEXT("off (no body)"));
 		}
+
+		UE_LOG(LogTemp, Error,
+			TEXT("%s body montage failed — ShadowKight swing assets/slot; chop=%s AnimBP=%s"),
+			*GetName(), bChop ? TEXT("on still running") : TEXT("off"),
+			*GetNameSafe(Hero->GetAnimClass()));
+		if (bChop)
+		{
+			ApplyMeleeBodyPose(0.05f);
+		}
+		MarkMeleeVisualSuccess();
+		return;
 	}
 
-	// No montage asset — procedural skeletal arm overlay + light torso lean.
-	ApplyMeleeBodyPose(0.f);
+	// --- Mannequin / non-SK: prefer Greystone/Steel DefaultSlot montages, else AxeSwing ---
+	bMeleeEmergencyChop = false;
+
+	// Montage_Play can return >0 while DefaultSlot/ControlRig leaves the output pose
+	// unchanged (19-58 capture: AxeSwing OK, zero visible motion, ProceduralChop=0).
+	// Always layer sword + torso lean on MM so LMB is readable even if the slot is dead.
+	auto LayerMannyVisibleChop = [this](const TCHAR* Reason)
+	{
+		bMeleeEmergencyChop = true;
+		MeleeSwingAnimDuration = SBMeleeSwingAnim::DurationSeconds;
+		MeleeSwingAnimRemaining = FMath::Max(0.01f, MeleeSwingAnimDuration - 0.02f);
+		ApplyMeleeBodyPose(0.05f);
+		if (TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset())
+		{
+			ApplySwordGripFromCVars();
+		}
+		UE_LOG(LogTemp, Warning,
+			TEXT("%s MM visible chop layered (%s) remaining=%.2fs"),
+			*GetName(), Reason, MeleeSwingAnimRemaining);
+	};
+
+	if (!CachedMeleeMontage)
+	{
+		UE_LOG(LogTemp, Error,
+			TEXT("%s MM melee montage missing (expected AM_MM_GreystoneSwing_A or AM_MM_AxeSwing_01)"),
+			*GetName());
+	}
+	if (!CachedMeleeSwingSequence)
+	{
+		UE_LOG(LogTemp, Error,
+			TEXT("%s MM melee sequence missing (expected AS_MM_GreystoneSwing_A or AS_MM_AxeSwing_01)"),
+			*GetName());
+	}
+
+	if (CachedMeleeMontage)
+	{
+		if (USkeleton* MontSkel = CachedMeleeMontage->GetSkeleton())
+		{
+			USkeleton* MeshSkel = Hero->GetSkeletalMeshAsset()
+				? Hero->GetSkeletalMeshAsset()->GetSkeleton()
+				: nullptr;
+			UE_LOG(LogTemp, Warning,
+				TEXT("%s montage=%s kind=%s skel=%s mesh skel=%s match=%d"),
+				*GetName(),
+				*GetNameSafe(CachedMeleeMontage),
+				MontageKind(CachedMeleeMontage),
+				*GetNameSafe(MontSkel),
+				*GetNameSafe(MeshSkel),
+				(MontSkel == MeshSkel) ? 1 : 0);
+		}
+		const float Played = AnimInst->Montage_Play(CachedMeleeMontage, 1.f);
+		if (Played > 0.f)
+		{
+			BeginMontageSwingTiming(Played);
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &ASBCharacter::OnMeleeSwingMontageEnded);
+			AnimInst->Montage_SetEndDelegate(EndDelegate, CachedMeleeMontage);
+			UE_LOG(LogTemp, Warning,
+				TEXT("%s Montage_Play OK %s kind=%s (%.2fs) AnimBP=%s chop=%d"),
+				*GetName(),
+				*GetNameSafe(CachedMeleeMontage),
+				MontageKind(CachedMeleeMontage),
+				Played,
+				*GetNameSafe(Hero->GetAnimClass()),
+				IsMeleeProceduralChopEnabled() ? 1 : 0);
+			if (!IsMeleeProceduralChopEnabled())
+			{
+				LayerMannyVisibleChop(TEXT("after Montage_Play; ProceduralChop=0"));
+			}
+			MarkMeleeVisualSuccess();
+			return;
+		}
+
+		UE_LOG(LogTemp, Error,
+			TEXT("%s body montage failed — Montage_Play returned 0 for %s kind=%s AnimBP=%s (DefaultSlot missing?)"),
+			*GetName(), *GetNameSafe(CachedMeleeMontage), MontageKind(CachedMeleeMontage),
+			*GetNameSafe(Hero->GetAnimClass()));
+	}
+	if (CachedMeleeSwingSequence)
+	{
+		static const FName DefaultSlot(TEXT("DefaultSlot"));
+		if (UAnimMontage* Dyn = AnimInst->PlaySlotAnimationAsDynamicMontage(
+				CachedMeleeSwingSequence, DefaultSlot, 0.05f, 0.12f, 1.f, 1))
+		{
+			const float PlayLen = FMath::Max(Dyn->GetPlayLength(), SBMeleeSwingAnim::DurationSeconds);
+			BeginMontageSwingTiming(PlayLen);
+			FOnMontageEnded EndDelegate;
+			EndDelegate.BindUObject(this, &ASBCharacter::OnMeleeSwingMontageEnded);
+			AnimInst->Montage_SetEndDelegate(EndDelegate, Dyn);
+			UE_LOG(LogTemp, Warning,
+				TEXT("%s Montage_Play OK via dynamic slot %s kind=%s (%.2fs) AnimBP=%s"),
+				*GetName(),
+				*GetNameSafe(CachedMeleeSwingSequence),
+				SequenceKind(CachedMeleeSwingSequence),
+				PlayLen, *GetNameSafe(Hero->GetAnimClass()));
+			if (!IsMeleeProceduralChopEnabled())
+			{
+				LayerMannyVisibleChop(TEXT("after dynamic slot; ProceduralChop=0"));
+			}
+			MarkMeleeVisualSuccess();
+			return;
+		}
+
+		UE_LOG(LogTemp, Error,
+			TEXT("%s dynamic MM slot FAILED %s kind=%s AnimBP=%s — chop=%s"),
+			*GetName(), *GetNameSafe(CachedMeleeSwingSequence), SequenceKind(CachedMeleeSwingSequence),
+			*GetNameSafe(Hero->GetAnimClass()), bChop ? TEXT("on only") : TEXT("off (no body)"));
+	}
+
+	// Last resort: DefaultSlot dead / assets missing — force procedural chop so LMB is visible.
+	UE_LOG(LogTemp, Error,
+		TEXT("%s body montage unavailable (sk=0 montage=%s) — emergency procedural chop AnimBP=%s"),
+		*GetName(), MontageKind(CachedMeleeMontage),
+		*GetNameSafe(Hero->GetAnimClass()));
+	LayerMannyVisibleChop(TEXT("no montage/slot"));
+	MarkMeleeVisualSuccess();
+}
+
+void ASBCharacter::OnMeleeSwingMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	// Ignore hold montage end callbacks; accept LibSwing/SwordSwing or dynamic slot montages.
+	if (CachedMeleeHoldMontage && Montage == CachedMeleeHoldMontage)
+	{
+		return;
+	}
+	bMeleeMontagePlaying = false;
+	bMeleeEmergencyChop = false;
+	if (MeleeSwingAnimRemaining <= 0.f)
+	{
+		UpdateSwordHoldMontage();
+	}
 }
 
 void ASBCharacter::EnsureMeleeSwingAnimAssets()
 {
-	if (!CachedMeleeMontage)
+	// Paragon Countess (and similar): incompatible skeleton — clear cache.
+	if (bUsingParagonHeroMesh && !bUsingShadowKightHeroMesh)
 	{
-		CachedMeleeMontage = LoadObject<UAnimMontage>(nullptr, SBMeleeSwingAnim::MeleeMontagePath);
+		CachedMeleeMontage = nullptr;
+		CachedMeleeSwingSequence = nullptr;
+		CachedMeleeHoldMontage = nullptr;
+		CachedMeleeHoldSequence = nullptr;
+		return;
 	}
-	if (!CachedMeleeSwingSequence)
+
+	if (bUsingShadowKightHeroMesh)
 	{
-		CachedMeleeSwingSequence = LoadObject<UAnimSequence>(nullptr, SBMeleeSwingAnim::MeleeSequencePath);
+		// Hard-coded LibSwing FIRST — never stick on a prior SwordSwing cache.
+		static const TCHAR* const LibSwingMontagePath =
+			TEXT("/Game/ShadowKight/Animations/Combat/AM_SK_LibSwing_01.AM_SK_LibSwing_01");
+		static const TCHAR* const LibSwingSequencePath =
+			TEXT("/Game/ShadowKight/Animations/Combat/AS_SK_LibSwing_01.AS_SK_LibSwing_01");
+		static const TCHAR* const SwordSwingMontagePath =
+			TEXT("/Game/ShadowKight/Animations/Combat/AM_SK_SwordSwing_01.AM_SK_SwordSwing_01");
+		static const TCHAR* const SwordSwingSequencePath =
+			TEXT("/Game/ShadowKight/Animations/Combat/AS_SK_SwordSwing_01.AS_SK_SwordSwing_01");
+
+		const bool bHaveLibMontage = CachedMeleeMontage
+			&& CachedMeleeMontage->GetName().Contains(TEXT("LibSwing"));
+		if (!bHaveLibMontage)
+		{
+			UAnimMontage* LibMontage = LoadObject<UAnimMontage>(nullptr, LibSwingMontagePath);
+			if (LibMontage)
+			{
+				CachedMeleeMontage = LibMontage;
+				UE_LOG(LogTemp, Warning,
+					TEXT("%s load AM_SK_LibSwing_01 OK path=%s ptr=%s"),
+					*GetName(), LibSwingMontagePath, *GetNameSafe(CachedMeleeMontage));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error,
+					TEXT("%s MISSING AM_SK_LibSwing_01 — LoadObject failed path=%s (run scripts/Create-ShadowKightLibSwing.ps1)"),
+					*GetName(), LibSwingMontagePath);
+				if (!CachedMeleeMontage)
+				{
+					CachedMeleeMontage = LoadObject<UAnimMontage>(nullptr, SwordSwingMontagePath);
+					UE_LOG(LogTemp, Warning,
+						TEXT("%s load AM_SK_SwordSwing_01 fallback %s → %s"),
+						*GetName(), SwordSwingMontagePath,
+						CachedMeleeMontage ? TEXT("OK") : TEXT("FAIL"));
+				}
+			}
+		}
+
+		const bool bHaveLibSeq = CachedMeleeSwingSequence
+			&& CachedMeleeSwingSequence->GetName().Contains(TEXT("LibSwing"));
+		if (!bHaveLibSeq)
+		{
+			UAnimSequence* LibSeq = LoadObject<UAnimSequence>(nullptr, LibSwingSequencePath);
+			if (LibSeq)
+			{
+				CachedMeleeSwingSequence = LibSeq;
+				UE_LOG(LogTemp, Warning,
+					TEXT("%s load AS_SK_LibSwing_01 OK path=%s ptr=%s"),
+					*GetName(), LibSwingSequencePath, *GetNameSafe(CachedMeleeSwingSequence));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error,
+					TEXT("%s MISSING AS_SK_LibSwing_01 — LoadObject failed path=%s (run scripts/Create-ShadowKightLibSwing.ps1)"),
+					*GetName(), LibSwingSequencePath);
+				if (!CachedMeleeSwingSequence)
+				{
+					CachedMeleeSwingSequence = LoadObject<UAnimSequence>(nullptr, SwordSwingSequencePath);
+					UE_LOG(LogTemp, Warning,
+						TEXT("%s load AS_SK_SwordSwing_01 fallback %s → %s"),
+						*GetName(), SwordSwingSequencePath,
+						CachedMeleeSwingSequence ? TEXT("OK") : TEXT("FAIL"));
+				}
+			}
+		}
+		EnsureMeleeHoldAnimAssets();
+		return;
 	}
+
+	// Hard-coded preferred Manny swings FIRST (Greystone A/B/C → Steel A → AxeSwing).
+	// Never stick on a prior SK LibSwing/SwordSwing cache.
+	const bool bHaveMannyMontage = CachedMeleeMontage
+		&& IsMannyPreferredSwingName(CachedMeleeMontage->GetName());
+	if (!bHaveMannyMontage)
+	{
+		CachedMeleeMontage = nullptr;
+		for (const TCHAR* Path : SBMeleeSwingAnim::PreferredMeleeMontagePaths)
+		{
+			if (UAnimMontage* M = LoadObject<UAnimMontage>(nullptr, Path))
+			{
+				CachedMeleeMontage = M;
+				UE_LOG(LogTemp, Warning,
+					TEXT("%s load MM melee montage OK name=%s path=%s"),
+					*GetName(), *GetNameSafe(M), Path);
+				break;
+			}
+			UE_LOG(LogTemp, Verbose,
+				TEXT("%s MM melee montage miss path=%s"), *GetName(), Path);
+		}
+		if (!CachedMeleeMontage)
+		{
+			UE_LOG(LogTemp, Error,
+				TEXT("%s MISSING all MM melee montages (Greystone/Steel/AxeSwing) — run scripts/Import-MannyMeleeFbx.ps1 or Create-MeleeSwingMontage.ps1"),
+				*GetName());
+		}
+	}
+
+	const bool bHaveMannySeq = CachedMeleeSwingSequence
+		&& IsMannyPreferredSwingName(CachedMeleeSwingSequence->GetName());
+	if (!bHaveMannySeq)
+	{
+		CachedMeleeSwingSequence = nullptr;
+		for (const TCHAR* Path : SBMeleeSwingAnim::PreferredMeleeSequencePaths)
+		{
+			if (UAnimSequence* S = LoadObject<UAnimSequence>(nullptr, Path))
+			{
+				CachedMeleeSwingSequence = S;
+				UE_LOG(LogTemp, Warning,
+					TEXT("%s load MM melee sequence OK name=%s path=%s"),
+					*GetName(), *GetNameSafe(S), Path);
+				break;
+			}
+		}
+		if (!CachedMeleeSwingSequence)
+		{
+			UE_LOG(LogTemp, Error,
+				TEXT("%s MISSING all MM melee sequences (Greystone/Steel/AxeSwing) — run scripts/Import-MannyMeleeFbx.ps1"),
+				*GetName());
+		}
+	}
+}
+
+void ASBCharacter::EnsureMeleeHoldAnimAssets()
+{
+	if (!bUsingShadowKightHeroMesh)
+	{
+		CachedMeleeHoldMontage = nullptr;
+		CachedMeleeHoldSequence = nullptr;
+		return;
+	}
+	if (!CachedMeleeHoldSequence)
+	{
+		CachedMeleeHoldSequence = LoadObject<UAnimSequence>(nullptr, SBMeleeSwingAnim::ShadowKightMeleeHoldSequencePath);
+	}
+	if (!CachedMeleeHoldMontage)
+	{
+		CachedMeleeHoldMontage = LoadObject<UAnimMontage>(nullptr, SBMeleeSwingAnim::ShadowKightMeleeHoldMontagePath);
+		if (!CachedMeleeHoldMontage && !CachedMeleeHoldSequence)
+		{
+			UE_LOG(LogShadowbaneCombat, Warning,
+				TEXT("%s AS/AM_SK_SwordHold_01 missing — run Create-ShadowKightHoldMontage.ps1"),
+				*GetName());
+		}
+	}
+}
+
+void ASBCharacter::StopSwordHoldMontage()
+{
+	if (USkeletalMeshComponent* Hero = GetMesh())
+	{
+		// Safety: never leave the hero mesh in single-node mode (kills loco).
+		if (Hero->GetAnimationMode() != EAnimationMode::AnimationBlueprint)
+		{
+			EnsureShadowKightMeleeAnimBP();
+		}
+		if (UAnimInstance* AnimInst = Hero->GetAnimInstance())
+		{
+			if (CachedMeleeHoldMontage && AnimInst->Montage_IsPlaying(CachedMeleeHoldMontage))
+			{
+				AnimInst->Montage_Stop(0.f, CachedMeleeHoldMontage);
+			}
+		}
+	}
+	bMeleeHoldMontagePlaying = false;
+}
+
+void ASBCharacter::UpdateSwordHoldMontage()
+{
+	const bool bShowSword = bUsesMelee && !bBowEquipped
+		&& TpSwordMesh && !TpSwordMesh->bHiddenInGame && TpSwordMesh->GetSkeletalMeshAsset();
+	// Optional arm hold only — never during swing montage OR procedural chop window
+	// (restarting hold every tick was fighting DefaultSlot / reading as "no swing").
+	const bool bWantHold = bUsingShadowKightHeroMesh && bShowSword
+		&& !bMeleeMontagePlaying && MeleeSwingAnimRemaining <= 0.f;
+
+	if (!bWantHold)
+	{
+		StopSwordHoldMontage();
+		return;
+	}
+
+	USkeletalMeshComponent* Hero = GetMesh();
+	if (!Hero)
+	{
+		return;
+	}
+
+	EnsureMeleeHoldAnimAssets();
+
+	UAnimInstance* AnimInst = Hero->GetAnimInstance();
+	if (!AnimInst)
+	{
+		return;
+	}
+
+	// Swing montage still finishing after procedural chop timer — do not steal the slot.
+	if (CachedMeleeMontage && AnimInst->Montage_IsPlaying(CachedMeleeMontage))
+	{
+		bMeleeMontagePlaying = true;
+		return;
+	}
+
+	// Weak hold: Montage on DefaultSlot only. If AnimBP lacks the slot, skip —
+	// idle/walk/run wins over a frozen hold. Never PlayAnimation for hold.
+	if (!CachedMeleeHoldMontage)
+	{
+		return;
+	}
+
+	if (AnimInst->Montage_IsPlaying(CachedMeleeHoldMontage))
+	{
+		bMeleeHoldMontagePlaying = true;
+		return;
+	}
+
+	const float Played = AnimInst->Montage_Play(CachedMeleeHoldMontage, 1.f);
+	if (Played <= 0.f)
+	{
+		bMeleeHoldMontagePlaying = false;
+		if (!bLoggedMeleeHoldRestartSkip)
+		{
+			UE_LOG(LogShadowbaneCombat, Log,
+				TEXT("%s hold Montage_Play skipped (no DefaultSlot) — locomotion only"),
+				*GetName());
+			bLoggedMeleeHoldRestartSkip = true;
+		}
+		return;
+	}
+
+	static const FName DefaultSection(TEXT("Default"));
+	AnimInst->Montage_SetNextSection(DefaultSection, DefaultSection, CachedMeleeHoldMontage);
+	bMeleeHoldMontagePlaying = true;
 }
 
 void ASBCharacter::BindHeroBoneSwingOverlay()
 {
+	// Disabled: mutating CS bone buffers after finalize (and disabling CS double-
+	// buffering) caused:
+	//   EditableBoneVisibilityStates.Num() == GetNumComponentSpaceTransforms()
+	// assert in SkeletalMeshComponent.cpp — crash on start/PIE with mesh+sword flash.
+	// Melee uses weapon-pivot chop only until a safe AnimInstance/montages path returns.
 	UnbindHeroBoneSwingOverlay();
-	if (USkeletalMeshComponent* Hero = GetMesh())
-	{
-		HeroBonesFinalizedHandle = Hero->RegisterOnBoneTransformsFinalizedDelegate(
-			FOnBoneTransformsFinalizedMultiCast::FDelegate::CreateUObject(this, &ASBCharacter::OnHeroBonesFinalized));
-	}
 }
 
 void ASBCharacter::UnbindHeroBoneSwingOverlay()
@@ -1944,95 +2914,32 @@ void ASBCharacter::UnbindHeroBoneSwingOverlay()
 
 void ASBCharacter::OnHeroBonesFinalized()
 {
-	if (bMeleeMontagePlaying || MeleeSwingAnimRemaining <= 0.f || !bUsingHeroMesh)
-	{
-		return;
-	}
-
-	const float Alpha = 1.f - (MeleeSwingAnimRemaining / FMath::Max(MeleeSwingAnimDuration, KINDA_SMALL_NUMBER));
-	ApplyProceduralMeleeArmBones(Alpha);
+	// Intentionally empty — do not write component-space bone transforms here.
 }
 
 void ASBCharacter::ApplyProceduralMeleeArmBones(float Alpha01)
 {
-	USkeletalMeshComponent* Hero = GetMesh();
-	if (!Hero || !Hero->GetSkeletalMeshAsset())
-	{
-		return;
-	}
-
-	TArray<SBMeleeSwingAnim::FBoneDelta, TInlineAllocator<12>> Deltas;
-	SBMeleeSwingAnim::EvalSkeletalBoneDeltas(Alpha01, Deltas);
-	if (Deltas.Num() == 0)
-	{
-		return;
-	}
-
-	TArray<FTransform>& CS = Hero->GetEditableComponentSpaceTransforms();
-	const int32 NumBones = CS.Num();
-	if (NumBones <= 0)
-	{
-		return;
-	}
-
-	// Apply each delta in component space, then rotate all descendants by the same
-	// world delta around the bone origin so the limb stays connected.
-	for (const SBMeleeSwingAnim::FBoneDelta& Delta : Deltas)
-	{
-		const int32 BoneIdx = Hero->GetBoneIndex(Delta.Bone);
-		if (BoneIdx == INDEX_NONE || !CS.IsValidIndex(BoneIdx))
-		{
-			continue;
-		}
-
-		const FQuat AddQ = Delta.Euler.Quaternion();
-		const FVector Pivot = CS[BoneIdx].GetLocation();
-		const FQuat OldQ = CS[BoneIdx].GetRotation();
-		CS[BoneIdx].SetRotation(AddQ * OldQ);
-		CS[BoneIdx].NormalizeRotation();
-
-		for (int32 ChildIdx = BoneIdx + 1; ChildIdx < NumBones; ++ChildIdx)
-		{
-			if (Hero->GetParentBone(Hero->GetBoneName(ChildIdx)) == NAME_None)
-			{
-				continue;
-			}
-			// Only affect bones that list this bone as an ancestor.
-			bool bDescendant = false;
-			FName Walk = Hero->GetParentBone(Hero->GetBoneName(ChildIdx));
-			while (Walk != NAME_None)
-			{
-				if (Walk == Delta.Bone)
-				{
-					bDescendant = true;
-					break;
-				}
-				Walk = Hero->GetParentBone(Walk);
-			}
-			if (!bDescendant || !CS.IsValidIndex(ChildIdx))
-			{
-				continue;
-			}
-
-			const FVector Rel = CS[ChildIdx].GetLocation() - Pivot;
-			CS[ChildIdx].SetLocation(Pivot + AddQ.RotateVector(Rel));
-			CS[ChildIdx].SetRotation(AddQ * CS[ChildIdx].GetRotation());
-			CS[ChildIdx].NormalizeRotation();
-		}
-	}
-
-	Hero->MarkRenderDynamicDataDirty();
+	// Intentionally empty — unsafe CS bone mutation removed for stability.
+	(void)Alpha01;
 }
 
 void ASBCharacter::ApplyMeleeBodyPose(float Alpha01)
 {
 	USkeletalMeshComponent* Hero = GetMesh();
-	if (!Hero || !bUsingHeroMesh || bMeleeMontagePlaying)
+	if (!Hero || !bUsingHeroMesh)
 	{
 		return;
 	}
 
-	// Light torso lean — arm bones do the readable chop via montage or procedural overlay.
+	// ShadowKight: never yaw/pitch the whole mesh — reads as sideways wobble while
+	// AM_SK_LibSwing_01 / SwordSwing + procedural chop drive the arm/blade.
+	if (bUsingShadowKightHeroMesh)
+	{
+		Hero->SetRelativeRotation(HeroMeshBaseRelativeRot);
+		return;
+	}
+
+	// Bold torso lean — readable even when montage/Control Rig fails to show arms.
 	const float A = FMath::Clamp(Alpha01, 0.f, 1.f);
 	float LeanYaw = 0.f;
 	float LeanPitch = 0.f;
@@ -2041,20 +2948,20 @@ void ASBCharacter::ApplyMeleeBodyPose(float Alpha01)
 		if (A < 0.28f)
 		{
 			const float U = SBMeleeSwingAnim::Smooth01(A / 0.28f);
-			LeanYaw = FMath::Lerp(0.f, -8.f, U);
-			LeanPitch = FMath::Lerp(0.f, -3.f, U);
+			LeanYaw = FMath::Lerp(0.f, -22.f, U);
+			LeanPitch = FMath::Lerp(0.f, -10.f, U);
 		}
 		else if (A < 0.52f)
 		{
 			const float U = SBMeleeSwingAnim::Smooth01((A - 0.28f) / 0.24f);
-			LeanYaw = FMath::Lerp(-8.f, 14.f, U * U);
-			LeanPitch = FMath::Lerp(-3.f, 5.f, U);
+			LeanYaw = FMath::Lerp(-22.f, 32.f, U * U);
+			LeanPitch = FMath::Lerp(-10.f, 12.f, U);
 		}
 		else
 		{
 			const float U = SBMeleeSwingAnim::Smooth01((A - 0.52f) / 0.48f);
-			LeanYaw = FMath::Lerp(14.f, 0.f, U);
-			LeanPitch = FMath::Lerp(5.f, 0.f, U);
+			LeanYaw = FMath::Lerp(32.f, 0.f, U);
+			LeanPitch = FMath::Lerp(12.f, 0.f, U);
 		}
 	}
 
@@ -2203,7 +3110,11 @@ void ASBCharacter::UpdatePlaceholderVisuals()
 
 void ASBCharacter::ApplyMeleeIdlePose()
 {
-	bMeleeMontagePlaying = false;
+	if (bUsingShadowKightHeroMesh)
+	{
+		EnsureShadowKightMeleeAnimBP();
+	}
+
 	if (FpWeaponPivot)
 	{
 		FpWeaponPivot->SetRelativeRotation(SBMeleeSwingAnim::EvalFpPivot(0.f));
@@ -2213,14 +3124,27 @@ void ASBCharacter::ApplyMeleeIdlePose()
 		// Hand-socket weapon: idle = grip rest (swing anim offsets from here).
 		TpWeaponPivot->SetRelativeRotation(FRotator(0.f, 90.f, 10.f));
 	}
+	if (TpSwordMesh && !TpSwordMesh->bHiddenInGame && TpSwordMesh->GetSkeletalMeshAsset())
+	{
+		ApplySwordGripFromCVars();
+	}
 	ApplyMeleeBodyPose(0.f);
 	bSwingTrailValid = false;
+	UpdateSwordHoldMontage();
 }
 
 void ASBCharacter::TickMeleeSwingVisual(float DeltaSeconds)
 {
 	if (MeleeSwingAnimRemaining <= 0.f)
 	{
+		return;
+	}
+
+	if (!IsMeleeProceduralChopEnabled() && !bMeleeEmergencyChop)
+	{
+		// Isolate: body montage owns the swing — clear leftover chop timer.
+		MeleeSwingAnimRemaining = 0.f;
+		ApplyMeleeIdlePose();
 		return;
 	}
 
@@ -2235,11 +3159,23 @@ void ASBCharacter::TickMeleeSwingVisual(float DeltaSeconds)
 		const FRotator Chop = SBMeleeSwingAnim::EvalTpPivot(Alpha);
 		TpWeaponPivot->SetRelativeRotation(FRotator(Chop.Pitch, 90.f + Chop.Yaw, Chop.Roll + 10.f));
 	}
+	// Sword is on hand_r (not TpWeaponPivot) — re-apply EvalTpSwordChop while swinging.
+	if (TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset())
+	{
+		if (bUsesMelee && !bBowEquipped && TpSwordMesh->bHiddenInGame)
+		{
+			TpSwordMesh->SetHiddenInGame(false);
+			TpSwordMesh->SetVisibility(true, true);
+		}
+		ApplySwordGripFromCVars();
+	}
+	// Torso lean for mannequin fallback only — SK skips inside ApplyMeleeBodyPose.
 	ApplyMeleeBodyPose(Alpha);
 
 	MeleeSwingAnimRemaining = FMath::Max(0.f, MeleeSwingAnimRemaining - DeltaSeconds);
 	if (MeleeSwingAnimRemaining <= 0.f)
 	{
+		bMeleeEmergencyChop = false;
 		ApplyMeleeIdlePose();
 	}
 }
@@ -2259,11 +3195,42 @@ void ASBCharacter::SetupHeroMeshForRace()
 	}
 
 	const FString Race = RaceName.ToLower();
-	const bool bPreferQuinn = Race.Contains(TEXT("elf")); // Elf + High Elf
+	bUsingParagonHeroMesh = false;
+	bUsingShadowKightHeroMesh = false;
 
 	USkeletalMesh* MeshAsset = nullptr;
 	UClass* AnimClass = nullptr;
-	if (bPreferQuinn)
+
+	// Optional Paragon Countess (Fab) — soft paths; no-op until Captain migrates the pack.
+	if (RaceMapsToCountess(Race))
+	{
+		MeshAsset = SBHeroSkinPaths::TryLoadCountessMesh();
+		if (MeshAsset)
+		{
+			AnimClass = SBHeroSkinPaths::TryLoadCountessAnimClass();
+			bUsingParagonHeroMesh = true;
+			UE_LOG(LogShadowbaneCombat, Log,
+				TEXT("%s using Paragon Countess hero mesh for race '%s'"), *GetName(), *RaceName);
+		}
+	}
+
+	// ShadowKight pack (Content/ShadowKight) — dogfood on Human when CVar on + assets present.
+	if (!MeshAsset && RaceMapsToShadowKight(Race))
+	{
+		MeshAsset = SBHeroSkinPaths::TryLoadShadowKightMesh();
+		if (MeshAsset)
+		{
+			AnimClass = SBHeroSkinPaths::TryLoadShadowKightAnimClass();
+			bUsingParagonHeroMesh = true; // non-UE5-mannequin: skip MM montage + race tint
+			bUsingShadowKightHeroMesh = true;
+			UE_LOG(LogShadowbaneCombat, Log,
+				TEXT("%s using ShadowKight hero mesh for race '%s' AnimBP=%s"),
+				*GetName(), *RaceName, *GetNameSafe(AnimClass));
+		}
+	}
+
+	const bool bPreferQuinn = !bUsingParagonHeroMesh && Race.Contains(TEXT("elf")); // Elf + High Elf
+	if (!MeshAsset && bPreferQuinn)
 	{
 		MeshAsset = LoadObject<USkeletalMesh>(nullptr, TEXT("/Game/Characters/Mannequins/Meshes/SKM_Quinn.SKM_Quinn"));
 		AnimClass = LoadClass<UAnimInstance>(nullptr, TEXT("/Game/Characters/Mannequins/Animations/ABP_Quinn.ABP_Quinn_C"));
@@ -2289,12 +3256,18 @@ void ASBCharacter::SetupHeroMeshForRace()
 	HeroMeshBaseRelativeRot = FRotator(0.f, -90.f, 0.f);
 	Hero->SetRelativeRotation(HeroMeshBaseRelativeRot);
 	Hero->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	Hero->bNoSkeletonUpdate = false;
+	Hero->bOwnerNoSee = false;
 
 	// Scale tweaks by race silhouette.
 
 	// Race scale / silhouette extras on top of the humanoid.
 	FVector MeshScale(1.f, 1.f, 1.f);
-	if (Race.Contains(TEXT("dwarf")))
+	if (bUsingParagonHeroMesh)
+	{
+		MeshScale = FVector(1.f, 1.f, 1.f); // Countess authored scale
+	}
+	else if (Race.Contains(TEXT("dwarf")))
 	{
 		MeshScale = FVector(1.05f, 1.05f, 0.78f);
 	}
@@ -2317,10 +3290,14 @@ void ASBCharacter::SetupHeroMeshForRace()
 	Hero->SetRelativeScale3D(MeshScale);
 
 	ApplyHeroRaceMaterials();
+	StopSwordHoldMontage();
+	CachedMeleeMontage = nullptr;
+	CachedMeleeSwingSequence = nullptr;
+	CachedMeleeHoldMontage = nullptr;
+	CachedMeleeHoldSequence = nullptr;
 	EnsureWeaponInHand();
-	ApplyMeleeIdlePose();
 	EnsureMeleeSwingAnimAssets();
-	BindHeroBoneSwingOverlay();
+	ApplyMeleeIdlePose();
 }
 
 void ASBCharacter::ApplyHeroRaceMaterials()
@@ -2328,6 +3305,14 @@ void ASBCharacter::ApplyHeroRaceMaterials()
 	USkeletalMeshComponent* Hero = GetMesh();
 	if (!Hero || !bUsingHeroMesh)
 	{
+		return;
+	}
+
+	// Keep authored Paragon / Countess materials (no flat race tint).
+	if (bUsingParagonHeroMesh)
+	{
+		Hero->EmptyOverrideMaterials();
+		Hero->SetOverlayMaterial(nullptr);
 		return;
 	}
 

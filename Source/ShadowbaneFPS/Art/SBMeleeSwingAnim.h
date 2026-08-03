@@ -17,12 +17,78 @@ namespace SBMeleeSwingAnim
 	/** Full swing length in seconds (windup + strike + recover). */
 	inline constexpr float DurationSeconds = 0.42f;
 
-	/** Content path for baked mannequin montage (Manny/Quinn share SK_Mannequin). */
+	/**
+	 * Preferred Manny/Quinn melee montages (SK_Mannequin / ABP_Manny DefaultSlot).
+	 * Paragon→Manny Greystone/Steel FBX via scripts/Import-MannyMeleeFbx.py — before short AxeSwing.
+	 */
+	inline constexpr const TCHAR* GreystoneSwingMontageAPath =
+		TEXT("/Game/Characters/Mannequins/Animations/Combat/AM_MM_GreystoneSwing_A.AM_MM_GreystoneSwing_A");
+	inline constexpr const TCHAR* GreystoneSwingSequenceAPath =
+		TEXT("/Game/Characters/Mannequins/Animations/Combat/AS_MM_GreystoneSwing_A.AS_MM_GreystoneSwing_A");
+	inline constexpr const TCHAR* GreystoneSwingMontageBPath =
+		TEXT("/Game/Characters/Mannequins/Animations/Combat/AM_MM_GreystoneSwing_B.AM_MM_GreystoneSwing_B");
+	inline constexpr const TCHAR* GreystoneSwingSequenceBPath =
+		TEXT("/Game/Characters/Mannequins/Animations/Combat/AS_MM_GreystoneSwing_B.AS_MM_GreystoneSwing_B");
+	inline constexpr const TCHAR* GreystoneSwingMontageCPath =
+		TEXT("/Game/Characters/Mannequins/Animations/Combat/AM_MM_GreystoneSwing_C.AM_MM_GreystoneSwing_C");
+	inline constexpr const TCHAR* GreystoneSwingSequenceCPath =
+		TEXT("/Game/Characters/Mannequins/Animations/Combat/AS_MM_GreystoneSwing_C.AS_MM_GreystoneSwing_C");
+	inline constexpr const TCHAR* SteelSwingMontageAPath =
+		TEXT("/Game/Characters/Mannequins/Animations/Combat/AM_MM_SteelSwing_A.AM_MM_SteelSwing_A");
+	inline constexpr const TCHAR* SteelSwingSequenceAPath =
+		TEXT("/Game/Characters/Mannequins/Animations/Combat/AS_MM_SteelSwing_A.AS_MM_SteelSwing_A");
+
+	/** Short baked fallback (scripts/Create-MeleeSwingMontage.py). */
 	inline constexpr const TCHAR* MeleeMontagePath =
 		TEXT("/Game/Characters/Mannequins/Animations/Combat/AM_MM_AxeSwing_01.AM_MM_AxeSwing_01");
 
 	inline constexpr const TCHAR* MeleeSequencePath =
 		TEXT("/Game/Characters/Mannequins/Animations/Combat/AS_MM_AxeSwing_01.AS_MM_AxeSwing_01");
+
+	/** Preferred MM montage soft paths in load order (first hit wins). */
+	inline constexpr const TCHAR* const PreferredMeleeMontagePaths[] = {
+		GreystoneSwingMontageAPath,
+		GreystoneSwingMontageBPath,
+		GreystoneSwingMontageCPath,
+		SteelSwingMontageAPath,
+		MeleeMontagePath,
+	};
+	inline constexpr const TCHAR* const PreferredMeleeSequencePaths[] = {
+		GreystoneSwingSequenceAPath,
+		GreystoneSwingSequenceBPath,
+		GreystoneSwingSequenceCPath,
+		SteelSwingSequenceAPath,
+		MeleeSequencePath,
+	};
+
+	/**
+	 * ShadowKight / UE4-bone swing (ShadowknightUE_Skeleton).
+	 * Preferred: IK-retargeted FreeAnimationLibrary Counter Attack
+	 * (scripts/Create-ShadowKightLibSwing.py) — NOT UE5 AM_MM_AxeSwing_01.
+	 * Fallback: baked AS/AM_SK_SwordSwing_01 (Create-ShadowKightSwingMontage.py).
+	 */
+	inline constexpr const TCHAR* ShadowKightLibSwingMontagePath =
+		TEXT("/Game/ShadowKight/Animations/Combat/AM_SK_LibSwing_01.AM_SK_LibSwing_01");
+
+	inline constexpr const TCHAR* ShadowKightLibSwingSequencePath =
+		TEXT("/Game/ShadowKight/Animations/Combat/AS_SK_LibSwing_01.AS_SK_LibSwing_01");
+
+	inline constexpr const TCHAR* ShadowKightMeleeMontagePath =
+		TEXT("/Game/ShadowKight/Animations/Combat/AM_SK_SwordSwing_01.AM_SK_SwordSwing_01");
+
+	inline constexpr const TCHAR* ShadowKightMeleeSequencePath =
+		TEXT("/Game/ShadowKight/Animations/Combat/AS_SK_SwordSwing_01.AS_SK_SwordSwing_01");
+
+	/**
+	 * ShadowKight sword hold (optional looping DefaultSlot montage only).
+	 * Never drive via PlayAnimation — that replaces the AnimBP and freezes loco.
+	 * Baked via scripts/Create-ShadowKightHoldMontage.py.
+	 */
+	inline constexpr const TCHAR* ShadowKightMeleeHoldMontagePath =
+		TEXT("/Game/ShadowKight/Animations/Combat/AM_SK_SwordHold_01.AM_SK_SwordHold_01");
+
+	inline constexpr const TCHAR* ShadowKightMeleeHoldSequencePath =
+		TEXT("/Game/ShadowKight/Animations/Combat/AS_SK_SwordHold_01.AS_SK_SwordHold_01");
 
 	/**
 	 * FPS arm / weapon pivot rotation for an overhead-to-side axe chop.
@@ -51,7 +117,7 @@ namespace SBMeleeSwingAnim
 		return FMath::Lerp(FRotator(28.f, 70.f, -8.f), Idle, U);
 	}
 
-	/** Third-person hand-mounted chop — moderate arc (body stays mostly still). */
+	/** Third-person hand-mounted chop — bold arc (axe on TpWeaponPivot reads this). */
 	inline FRotator EvalTpPivot(float Alpha01)
 	{
 		const float A = FMath::Clamp(Alpha01, 0.f, 1.f);
@@ -63,16 +129,27 @@ namespace SBMeleeSwingAnim
 		if (A < 0.30f)
 		{
 			const float U = Smooth01(A / 0.30f);
-			return FMath::Lerp(Idle, FRotator(-25.f, -40.f, 20.f), U);
+			return FMath::Lerp(Idle, FRotator(-55.f, -70.f, 35.f), U);
 		}
 		if (A < 0.55f)
 		{
 			const float U = Smooth01((A - 0.30f) / 0.25f);
 			const float Power = U * U;
-			return FMath::Lerp(FRotator(-25.f, -40.f, 20.f), FRotator(30.f, 55.f, -5.f), Power);
+			return FMath::Lerp(FRotator(-55.f, -70.f, 35.f), FRotator(50.f, 85.f, -20.f), Power);
 		}
 		const float U = Smooth01((A - 0.55f) / 0.45f);
-		return FMath::Lerp(FRotator(30.f, 55.f, -5.f), Idle, U);
+		return FMath::Lerp(FRotator(50.f, 85.f, -20.f), Idle, U);
+	}
+
+	/**
+	 * Optional additive on sword relative Rot (scaled by sb.Sword.ChopScale).
+	 * Grip base is SwordLODS +Y → hand +X (RotY -90). Full pivot deltas send tip
+	 * through the torso when Greystone already drives hand_r — keep ChopScale 0
+	 * for montage-owned front arcs; raise slightly for axe/fallback polish.
+	 */
+	inline FRotator EvalTpSwordChop(float Alpha01)
+	{
+		return EvalTpPivot(Alpha01);
 	}
 
 	inline bool IsStrikeWindow(float Alpha01)
@@ -107,21 +184,21 @@ namespace SBMeleeSwingAnim
 			D.Euler = R;
 		};
 
-		const FRotator Windup_ClavR(-8.f, -18.f, 12.f);
-		const FRotator Windup_UpperR(-70.f, -45.f, 35.f);
-		const FRotator Windup_LowerR(10.f, 5.f, -65.f);
-		const FRotator Windup_HandR(20.f, -25.f, 15.f);
-		const FRotator Windup_Spine3(4.f, -12.f, 8.f);
-		const FRotator Windup_Spine2(2.f, -6.f, 4.f);
-		const FRotator Windup_UpperL(15.f, 20.f, -12.f);
+		const FRotator Windup_ClavR(-12.f, -28.f, 18.f);
+		const FRotator Windup_UpperR(-95.f, -55.f, 40.f);
+		const FRotator Windup_LowerR(15.f, 8.f, -80.f);
+		const FRotator Windup_HandR(25.f, -30.f, 18.f);
+		const FRotator Windup_Spine3(6.f, -16.f, 10.f);
+		const FRotator Windup_Spine2(3.f, -8.f, 5.f);
+		const FRotator Windup_UpperL(20.f, 25.f, -15.f);
 
-		const FRotator Strike_ClavR(10.f, 28.f, -8.f);
-		const FRotator Strike_UpperR(45.f, 70.f, -20.f);
-		const FRotator Strike_LowerR(-5.f, -10.f, -15.f);
-		const FRotator Strike_HandR(-10.f, 30.f, -20.f);
-		const FRotator Strike_Spine3(-2.f, 18.f, -6.f);
-		const FRotator Strike_Spine2(-1.f, 10.f, -3.f);
-		const FRotator Strike_UpperL(-5.f, -10.f, 8.f);
+		const FRotator Strike_ClavR(14.f, 36.f, -12.f);
+		const FRotator Strike_UpperR(55.f, 85.f, -25.f);
+		const FRotator Strike_LowerR(-8.f, -12.f, -20.f);
+		const FRotator Strike_HandR(-12.f, 35.f, -25.f);
+		const FRotator Strike_Spine3(-3.f, 22.f, -8.f);
+		const FRotator Strike_Spine2(-2.f, 12.f, -4.f);
+		const FRotator Strike_UpperL(-8.f, -14.f, 10.f);
 
 		FRotator ClavR, UpperR, LowerR, HandR, Spine3, Spine2, UpperL;
 		if (A < 0.30f)

@@ -41,6 +41,12 @@ Platforms/*/Binaries/
 /Cooked/
 /Dist/
 
+# Parked marketplace / Fab dumps (kept out of Content so Editor/PIE do not scan them)
+_ParkedContent/
+
+# Do not re-drop Fab VaultCache / mega anim libraries into cooked Content
+Content/Anims/
+
 # Local-only config that should not be shared
 Config/*Local*.ini
 
