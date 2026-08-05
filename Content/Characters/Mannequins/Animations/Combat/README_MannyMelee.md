@@ -18,10 +18,28 @@ Writes under `/Game/Characters/Mannequins/Animations/Combat` on skeleton `SK_Man
 
 | Sequence | Montage (DefaultSlot) |
 |---|---|
-| `AS_MM_GreystoneSwing_A/B/C` (+ RMB) | `AM_MM_GreystoneSwing_A/B/C` (+ RMB) |
-| `AS_MM_SteelSwing_A` (+ B/C seq only) | `AM_MM_SteelSwing_A` |
-| `AS_MM_SerathSwing_A/B/C` | (seq only) |
+| `AS_MM_GreystoneSwing_A/B/C` (+ RMB anim) | `AM_MM_GreystoneSwing_A/B/C` (+ RMB) |
+| `AS_MM_SteelSwing_A` (+ B/C seq) | `AM_MM_SteelSwing_A` (+ B/C if baked) |
+| `AS_MM_SerathSwing_A/B/C` | montages optional via `Create-MannySwingMontagesFromSeq.ps1` |
 
-## Runtime (C++)
+## Runtime combo (Manny, `sb.Hero.UseShadowKight 0`)
 
-With `sb.Hero.UseShadowKight 0`, LMB prefers `AM_MM_GreystoneSwing_A` → B → C → `AM_MM_SteelSwing_A` → `AM_MM_AxeSwing_01` on `ABP_Manny` DefaultSlot. If montage/slot fails entirely, emergency procedural chop still fires so LMB is not dead.
+Greystone **A → B → C** on LMB (`AM_MM_GreystoneSwing_*`):
+
+1. LMB → play **A** (~1.7s). No mid-montage interrupt.
+2. After A **ends**, **0.5s** window (`sb.Melee.ComboWindowSec`) to press for **B**. Same after B for **C**.
+3. Miss the window → next LMB is **A**. After **C** → next is always **A**.
+4. **Bank LMB:** press during the anim → one queued continue; when the montage ends, auto-plays B/C (no extra click). Spam during anim still counts as one bank.
+5. **RMB** while a swing is playing → cancel montage/chop, clear combo + bank + window (reset to A). RMB is not otherwise bound for melee; bow/aim uses LMB.
+
+Fallback if Greystone assets missing: Preferred list → Steel A → `AM_MM_AxeSwing_01`. Emergency procedural chop if slot fails.
+
+### Test
+
+| Action | Expect |
+|---|---|
+| LMB | Greystone A |
+| Spam LMB during A | A finishes → auto B |
+| Wait >0.5s after A ends, LMB | A again |
+| A end → LMB within 0.5s → B end → LMB within 0.5s | C, then next A |
+| RMB mid-swing | Cancel, next LMB is A |

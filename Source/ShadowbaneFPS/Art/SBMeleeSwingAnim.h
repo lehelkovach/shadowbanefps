@@ -45,7 +45,20 @@ namespace SBMeleeSwingAnim
 	inline constexpr const TCHAR* MeleeSequencePath =
 		TEXT("/Game/Characters/Mannequins/Animations/Combat/AS_MM_AxeSwing_01.AS_MM_AxeSwing_01");
 
-	/** Preferred MM montage soft paths in load order (first hit wins). */
+	/** Greystone LMB combo A→B→C then reset to A — see sb.Melee.ComboWindowSec (post-anim). */
+	inline constexpr const TCHAR* const GreystoneComboMontagePaths[] = {
+		GreystoneSwingMontageAPath,
+		GreystoneSwingMontageBPath,
+		GreystoneSwingMontageCPath,
+	};
+	inline constexpr const TCHAR* const GreystoneComboSequencePaths[] = {
+		GreystoneSwingSequenceAPath,
+		GreystoneSwingSequenceBPath,
+		GreystoneSwingSequenceCPath,
+	};
+	inline constexpr int32 GreystoneComboCount = 3;
+
+	/** Preferred MM montage soft paths in load order (first hit wins / fallbacks). */
 	inline constexpr const TCHAR* const PreferredMeleeMontagePaths[] = {
 		GreystoneSwingMontageAPath,
 		GreystoneSwingMontageBPath,

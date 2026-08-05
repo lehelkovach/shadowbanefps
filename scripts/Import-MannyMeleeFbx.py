@@ -28,11 +28,11 @@ IMPORT_MAP = [
     ("GreystoneManny_Attack_PrimaryC.FBX", "AS_MM_GreystoneSwing_C", True, "AM_MM_GreystoneSwing_C"),
     ("GreystoneManny_Attack_RMB.FBX", "AS_MM_GreystoneSwing_RMB", True, "AM_MM_GreystoneSwing_RMB"),
     ("steelmanny_Steel_Attack_Melee_A.FBX", "AS_MM_SteelSwing_A", True, "AM_MM_SteelSwing_A"),
-    ("steelmanny_Steel_Attack_Melee_B.FBX", "AS_MM_SteelSwing_B", False, None),
-    ("steelmanny_Steel_Attack_Melee_C.FBX", "AS_MM_SteelSwing_C", False, None),
-    ("SerathManny_Primary_Attack_A_Medium.FBX", "AS_MM_SerathSwing_A", False, None),
-    ("SerathManny_Primary_Attack_B_Medium.FBX", "AS_MM_SerathSwing_B", False, None),
-    ("SerathManny_Primary_Attack_C_Medium_120fps.FBX", "AS_MM_SerathSwing_C", False, None),
+    ("steelmanny_Steel_Attack_Melee_B.FBX", "AS_MM_SteelSwing_B", True, "AM_MM_SteelSwing_B"),
+    ("steelmanny_Steel_Attack_Melee_C.FBX", "AS_MM_SteelSwing_C", True, "AM_MM_SteelSwing_C"),
+    ("SerathManny_Primary_Attack_A_Medium.FBX", "AS_MM_SerathSwing_A", True, "AM_MM_SerathSwing_A"),
+    ("SerathManny_Primary_Attack_B_Medium.FBX", "AS_MM_SerathSwing_B", True, "AM_MM_SerathSwing_B"),
+    ("SerathManny_Primary_Attack_C_Medium_120fps.FBX", "AS_MM_SerathSwing_C", True, "AM_MM_SerathSwing_C"),
 ]
 
 

@@ -120,9 +120,21 @@ namespace
 		TEXT("1 = procedural pivot + torso lean with body montage (default). 0 = montage-only isolate. Sword relative chop uses sb.Sword.ChopScale."),
 		ECVF_Default);
 
+	/** Manny Greystone A→B→C: seconds after montage ends to press (or banked LMB) for next letter; miss → A. */
+	TAutoConsoleVariable<float> CVarMeleeComboWindowSec(
+		TEXT("sb.Melee.ComboWindowSec"),
+		0.5f,
+		TEXT("Manny Greystone: after A/B ends, LMB within this many seconds plays B/C. LMB during anim banks one continue. After C or miss → A. RMB cancels swing."),
+		ECVF_Default);
+
 	bool IsMeleeProceduralChopEnabled()
 	{
 		return CVarMeleeProceduralChop.GetValueOnGameThread() != 0;
+	}
+
+	float GetMeleeComboWindowSec()
+	{
+		return FMath::Max(0.05f, CVarMeleeComboWindowSec.GetValueOnGameThread());
 	}
 
 	bool IsMannyPreferredSwingName(const FString& N)
@@ -528,12 +540,18 @@ void ASBCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		{
 			EIC->BindAction(FireAction, ETriggerEvent::Started, this, &ASBCharacter::OnFirePressed);
 		}
+		if (MeleeCancelAction)
+		{
+			EIC->BindAction(MeleeCancelAction, ETriggerEvent::Started, this, &ASBCharacter::OnMeleeCancelPressed);
+		}
 	}
 
 	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Released, this, &ACharacter::StopJumping);
 	PlayerInputComponent->BindAction(TEXT("Fire"), IE_Pressed, this, &ASBCharacter::OnFirePressed);
 	PlayerInputComponent->BindAction(TEXT("Fire"), IE_Released, this, &ASBCharacter::OnFireReleased);
+	PlayerInputComponent->BindAction(TEXT("MeleeCancel"), IE_Pressed, this, &ASBCharacter::OnMeleeCancelPressed);
+	PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ASBCharacter::OnMeleeCancelPressed);
 	PlayerInputComponent->BindAction(TEXT("ToggleBow"), IE_Pressed, this, &ASBCharacter::OnToggleBowPressed);
 	PlayerInputComponent->BindAction(TEXT("Interact"), IE_Pressed, this, &ASBCharacter::OnInteractPressed);
 	PlayerInputComponent->BindAction(TEXT("Ping"), IE_Pressed, this, &ASBCharacter::OnPingPressed);
@@ -839,6 +857,9 @@ void ASBCharacter::EnsureEnhancedInputAssets()
 	FireAction = NewObject<UInputAction>(this, TEXT("IA_SB_Fire"));
 	FireAction->ValueType = EInputActionValueType::Boolean;
 
+	MeleeCancelAction = NewObject<UInputAction>(this, TEXT("IA_SB_MeleeCancel"));
+	MeleeCancelAction->ValueType = EInputActionValueType::Boolean;
+
 	MoveMappingContext = NewObject<UInputMappingContext>(this, TEXT("IMC_SB_Default"));
 
 	MoveMappingContext->MapKey(MoveForwardAction, EKeys::W);
@@ -866,6 +887,7 @@ void ASBCharacter::EnsureEnhancedInputAssets()
 
 	MoveMappingContext->MapKey(JumpAction, EKeys::SpaceBar);
 	MoveMappingContext->MapKey(FireAction, EKeys::LeftMouseButton);
+	MoveMappingContext->MapKey(MeleeCancelAction, EKeys::RightMouseButton);
 }
 
 void ASBCharacter::Turn(float Value)
@@ -885,9 +907,31 @@ void ASBCharacter::OnFirePressed()
 	if (IsLocallyControlled() && !bDead && bUsesMelee && !bBowEquipped
 		&& Stamina >= MeleeStaminaCost)
 	{
+		// Bank one LMB during active Greystone swing — defer ServerFire until anim ends.
+		if (IsMannyGreystoneComboPath() && IsMeleeSwingMontageActive())
+		{
+			bMeleeLmbBanked = true;
+			UE_LOG(LogTemp, Warning,
+				TEXT("%s LMB banked during Greystone swing (combo=%d) — continue on end"),
+				*GetName(), MeleeComboIndex);
+			return;
+		}
 		PlayMeleeAttackAnimation();
 	}
 	ServerFire();
+}
+
+void ASBCharacter::OnMeleeCancelPressed()
+{
+	if (!IsLocallyControlled() || bDead || !bUsesMelee || bBowEquipped)
+	{
+		return;
+	}
+	if (!IsMeleeSwingMontageActive() && MeleeSwingAnimRemaining <= 0.f)
+	{
+		return;
+	}
+	CancelMeleeSwing(TEXT("RMB"));
 }
 
 void ASBCharacter::OnInteractPressed()
@@ -2218,15 +2262,47 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 	// observers seeing only debounce Warnings while body montage never ran.
 	UWorld* World = GetWorld();
 	const float Now = World ? World->GetTimeSeconds() : 0.f;
-	EnsureMeleeSwingAnimAssets();
 	const bool bChop = IsMeleeProceduralChopEnabled() || bMeleeEmergencyChop;
-	// LibSwing ~1.7s; Greystone Paragon swings ~1–2s — short debounce restarted mid-swing.
-	const float MeleeVisualDebounceSeconds = bUsingShadowKightHeroMesh
-		? 1.65f
-		: (CachedMeleeMontage && IsMannyPreferredSwingName(CachedMeleeMontage->GetName())
-			&& !CachedMeleeMontage->GetName().Contains(TEXT("AxeSwing"))
-				? 1.20f
-				: 0.35f);
+
+	USkeletalMeshComponent* HeroEarly = GetMesh();
+	UAnimInstance* AnimInstEarly = HeroEarly ? HeroEarly->GetAnimInstance() : nullptr;
+	const bool bMontageStillPlaying = bMeleeMontagePlaying
+		|| (AnimInstEarly && CachedMeleeMontage && AnimInstEarly->Montage_IsPlaying(CachedMeleeMontage))
+		|| (AnimInstEarly && CachedMeleeMontage == nullptr && AnimInstEarly->IsAnyMontagePlaying()
+			&& !bMeleeHoldMontagePlaying);
+
+	// Greystone: never interrupt mid-montage. Bank one LMB from a real extra press;
+	// Multicast echo of the same swing (dt since start tiny) must not bank.
+	if (IsMannyGreystoneComboPath() && bMontageStillPlaying)
+	{
+		if (World && (Now - LastMeleeVisualTime) < 0.25f)
+		{
+			UE_LOG(LogTemp, Verbose,
+				TEXT("%s Greystone Multicast echo while playing — skip (no bank)"),
+				*GetName());
+			return;
+		}
+		bMeleeLmbBanked = true;
+		UE_LOG(LogTemp, Warning,
+			TEXT("%s Greystone swing playing — LMB banked (combo=%d), no interrupt"),
+			*GetName(), MeleeComboIndex);
+		return;
+	}
+
+	int32 PendingComboIndex = 0;
+	if (IsMannyGreystoneComboPath())
+	{
+		PendingComboIndex = ResolveMannyGreystoneComboIndex(Now);
+	}
+
+	EnsureMeleeSwingAnimAssets();
+	if (IsMannyGreystoneComboPath())
+	{
+		SelectMannyGreystoneComboAssets(PendingComboIndex);
+	}
+
+	// SK: full-swing debounce. Manny: short anti-dupe only (combo gated by montage + window).
+	const float MeleeVisualDebounceSeconds = bUsingShadowKightHeroMesh ? 1.65f : 0.08f;
 	if (World && (Now - LastMeleeVisualTime) < MeleeVisualDebounceSeconds)
 	{
 		UE_LOG(LogTemp, Warning,
@@ -2235,11 +2311,24 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		return;
 	}
 
-	auto MarkMeleeVisualSuccess = [this, World]()
+	auto MarkMeleeVisualSuccess = [this, World, PendingComboIndex](float PlayedSeconds)
 	{
 		if (World)
 		{
 			LastMeleeVisualTime = World->GetTimeSeconds();
+		}
+		if (IsMannyGreystoneComboPath())
+		{
+			MeleeComboIndex = PendingComboIndex;
+			MeleeComboAcceptUntil = -1000.f; // closed until montage ends
+			const float Len = FMath::Max(PlayedSeconds, 0.1f);
+			MeleeComboExpectedEndTime = LastMeleeVisualTime + Len;
+			bMeleeLmbBanked = false;
+			UE_LOG(LogTemp, Warning,
+				TEXT("%s Greystone combo start step=%d (%s) len=%.2fs"),
+				*GetName(), MeleeComboIndex,
+				MeleeComboIndex == 0 ? TEXT("A") : (MeleeComboIndex == 1 ? TEXT("B") : TEXT("C")),
+				Len);
 		}
 	};
 
@@ -2312,14 +2401,9 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 	};
 
 	USkeletalMeshComponent* Hero = GetMesh();
-	UAnimInstance* AnimInstEarly = Hero ? Hero->GetAnimInstance() : nullptr;
 
-	// Don't restart body montage until the current LibSwing/SwordSwing finishes.
-	const bool bMontageStillPlaying = bMeleeMontagePlaying
-		|| (AnimInstEarly && CachedMeleeMontage && AnimInstEarly->Montage_IsPlaying(CachedMeleeMontage))
-		|| (AnimInstEarly && CachedMeleeMontage == nullptr && AnimInstEarly->IsAnyMontagePlaying()
-			&& !bMeleeHoldMontagePlaying);
-	if (bMontageStillPlaying)
+	// ShadowKight / non-Manny: don't restart until current swing finishes.
+	if (!IsMannyGreystoneComboPath() && bMontageStillPlaying)
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("%s ISOLATE: chop=%s montage=%s playing — skip Montage_Play restart"),
@@ -2329,7 +2413,8 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		return;
 	}
 	// Procedural-chop window still active (non-isolate): skip restarting the short chop.
-	if (bChop && MeleeSwingAnimRemaining > 0.05f)
+	// Manny Greystone: allow next letter once montage ended even if chop leftover is tiny.
+	if (bChop && MeleeSwingAnimRemaining > 0.05f && !IsMannyGreystoneComboPath())
 	{
 		UE_LOG(LogTemp, Warning,
 			TEXT("%s ISOLATE: chop=on remaining=%.2fs — skip restart"),
@@ -2351,7 +2436,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		{
 			ApplyMeleeBodyPose(0.05f);
 		}
-		MarkMeleeVisualSuccess();
+		MarkMeleeVisualSuccess(SBMeleeSwingAnim::DurationSeconds);
 		return;
 	}
 
@@ -2391,7 +2476,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		{
 			ApplyMeleeBodyPose(0.05f);
 		}
-		MarkMeleeVisualSuccess();
+		MarkMeleeVisualSuccess(SBMeleeSwingAnim::DurationSeconds);
 		return;
 	}
 
@@ -2454,7 +2539,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 					MontageKind(CachedMeleeMontage),
 					Played,
 					*GetNameSafe(Hero->GetAnimClass()));
-				MarkMeleeVisualSuccess();
+				MarkMeleeVisualSuccess(Played);
 				return;
 			}
 
@@ -2487,7 +2572,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 					bChop ? TEXT("on") : TEXT("off"),
 					SequenceKind(CachedMeleeSwingSequence),
 					PlayLen, *GetNameSafe(Hero->GetAnimClass()));
-				MarkMeleeVisualSuccess();
+				MarkMeleeVisualSuccess(PlayLen);
 				return;
 			}
 
@@ -2505,7 +2590,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		{
 			ApplyMeleeBodyPose(0.05f);
 		}
-		MarkMeleeVisualSuccess();
+		MarkMeleeVisualSuccess(SBMeleeSwingAnim::DurationSeconds);
 		return;
 	}
 
@@ -2578,7 +2663,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 			{
 				LayerMannyVisibleChop(TEXT("after Montage_Play; ProceduralChop=0"));
 			}
-			MarkMeleeVisualSuccess();
+			MarkMeleeVisualSuccess(Played);
 			return;
 		}
 
@@ -2608,7 +2693,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 			{
 				LayerMannyVisibleChop(TEXT("after dynamic slot; ProceduralChop=0"));
 			}
-			MarkMeleeVisualSuccess();
+			MarkMeleeVisualSuccess(PlayLen);
 			return;
 		}
 
@@ -2624,7 +2709,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		*GetName(), MontageKind(CachedMeleeMontage),
 		*GetNameSafe(Hero->GetAnimClass()));
 	LayerMannyVisibleChop(TEXT("no montage/slot"));
-	MarkMeleeVisualSuccess();
+	MarkMeleeVisualSuccess(SBMeleeSwingAnim::DurationSeconds);
 }
 
 void ASBCharacter::OnMeleeSwingMontageEnded(UAnimMontage* Montage, bool bInterrupted)
@@ -2636,9 +2721,168 @@ void ASBCharacter::OnMeleeSwingMontageEnded(UAnimMontage* Montage, bool bInterru
 	}
 	bMeleeMontagePlaying = false;
 	bMeleeEmergencyChop = false;
+	if (!bInterrupted && IsMannyGreystoneComboPath())
+	{
+		OpenMannyMeleeComboWindow();
+	}
 	if (MeleeSwingAnimRemaining <= 0.f)
 	{
 		UpdateSwordHoldMontage();
+	}
+}
+
+bool ASBCharacter::IsMannyGreystoneComboPath() const
+{
+	return !bUsingShadowKightHeroMesh && !bUsingParagonHeroMesh;
+}
+
+bool ASBCharacter::IsMeleeSwingMontageActive() const
+{
+	if (bMeleeMontagePlaying)
+	{
+		return true;
+	}
+	const USkeletalMeshComponent* Hero = GetMesh();
+	const UAnimInstance* AnimInst = Hero ? Hero->GetAnimInstance() : nullptr;
+	if (!AnimInst)
+	{
+		return false;
+	}
+	if (CachedMeleeMontage && AnimInst->Montage_IsPlaying(CachedMeleeMontage))
+	{
+		return true;
+	}
+	return CachedMeleeMontage == nullptr && AnimInst->IsAnyMontagePlaying() && !bMeleeHoldMontagePlaying;
+}
+
+void ASBCharacter::ResetMannyMeleeComboState()
+{
+	MeleeComboIndex = 0;
+	MeleeComboAcceptUntil = -1000.f;
+	MeleeComboExpectedEndTime = -1000.f;
+	bMeleeLmbBanked = false;
+}
+
+int32 ASBCharacter::ResolveMannyGreystoneComboIndex(float Now) const
+{
+	// After C, next is always A (no wrap chain).
+	if (MeleeComboIndex >= 2)
+	{
+		return 0;
+	}
+
+	bool bInWindow = false;
+	if (MeleeComboAcceptUntil > -999.f && Now <= MeleeComboAcceptUntil)
+	{
+		bInWindow = true;
+	}
+	else if (MeleeComboAcceptUntil <= -999.f && MeleeComboExpectedEndTime > -999.f)
+	{
+		const float Window = GetMeleeComboWindowSec();
+		if (Now >= MeleeComboExpectedEndTime && Now <= MeleeComboExpectedEndTime + Window)
+		{
+			bInWindow = true;
+		}
+	}
+
+	if (bInWindow && MeleeComboIndex >= 0 && MeleeComboIndex < 2)
+	{
+		return MeleeComboIndex + 1;
+	}
+	return 0;
+}
+
+void ASBCharacter::SelectMannyGreystoneComboAssets(int32 ComboIndex)
+{
+	ComboIndex = FMath::Clamp(ComboIndex, 0, SBMeleeSwingAnim::GreystoneComboCount - 1);
+	CachedMeleeMontage = LoadObject<UAnimMontage>(
+		nullptr, SBMeleeSwingAnim::GreystoneComboMontagePaths[ComboIndex]);
+	CachedMeleeSwingSequence = LoadObject<UAnimSequence>(
+		nullptr, SBMeleeSwingAnim::GreystoneComboSequencePaths[ComboIndex]);
+
+	if (!CachedMeleeMontage)
+	{
+		for (const TCHAR* Path : SBMeleeSwingAnim::PreferredMeleeMontagePaths)
+		{
+			if (UAnimMontage* M = LoadObject<UAnimMontage>(nullptr, Path))
+			{
+				CachedMeleeMontage = M;
+				UE_LOG(LogTemp, Warning,
+					TEXT("%s Greystone combo %d montage miss — fallback %s"),
+					*GetName(), ComboIndex, *GetNameSafe(M));
+				break;
+			}
+		}
+	}
+	if (!CachedMeleeSwingSequence)
+	{
+		for (const TCHAR* Path : SBMeleeSwingAnim::PreferredMeleeSequencePaths)
+		{
+			if (UAnimSequence* S = LoadObject<UAnimSequence>(nullptr, Path))
+			{
+				CachedMeleeSwingSequence = S;
+				break;
+			}
+		}
+	}
+}
+
+void ASBCharacter::OpenMannyMeleeComboWindow()
+{
+	if (!IsMannyGreystoneComboPath())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	const float Now = World ? World->GetTimeSeconds() : 0.f;
+	const float Window = GetMeleeComboWindowSec();
+	MeleeComboAcceptUntil = Now + Window;
+
+	const bool bHadBank = bMeleeLmbBanked;
+	bMeleeLmbBanked = false;
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("%s Greystone combo window open %.2fs (step=%d bank=%d)"),
+		*GetName(), Window, MeleeComboIndex, bHadBank ? 1 : 0);
+
+	// Banked LMB during A/B → immediately continue to B/C (as if pressed in window).
+	if (bHadBank && MeleeComboIndex < 2 && IsLocallyControlled() && !bDead
+		&& bUsesMelee && !bBowEquipped && Stamina >= MeleeStaminaCost)
+	{
+		PlayMeleeAttackAnimation();
+		ServerFire();
+	}
+}
+
+void ASBCharacter::CancelMeleeSwing(const TCHAR* Reason)
+{
+	USkeletalMeshComponent* Hero = GetMesh();
+	if (UAnimInstance* AnimInst = Hero ? Hero->GetAnimInstance() : nullptr)
+	{
+		if (CachedMeleeMontage && AnimInst->Montage_IsPlaying(CachedMeleeMontage))
+		{
+			AnimInst->Montage_Stop(0.05f, CachedMeleeMontage);
+		}
+		else if (AnimInst->IsAnyMontagePlaying() && !bMeleeHoldMontagePlaying)
+		{
+			AnimInst->StopAllMontages(0.05f);
+		}
+	}
+
+	bMeleeMontagePlaying = false;
+	bMeleeEmergencyChop = false;
+	MeleeSwingAnimRemaining = 0.f;
+	if (IsMannyGreystoneComboPath())
+	{
+		ResetMannyMeleeComboState();
+	}
+	ApplyMeleeIdlePose();
+	UpdateSwordHoldMontage();
+	UE_LOG(LogTemp, Warning, TEXT("%s melee swing cancelled (%s)"), *GetName(), Reason ? Reason : TEXT("?"));
+	if (IsLocallyControlled())
+	{
+		FSBClientDebug::PushMessage(TEXT("MELEE CANCEL"), 0.6f);
 	}
 }
 

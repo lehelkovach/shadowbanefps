@@ -290,6 +290,17 @@ protected:
 	bool bLoggedMeleeHoldRestartSkip = false;
 	/** Stamped only AFTER a successful PlayMeleeAttackAnimation (not on debounce entry). */
 	float LastMeleeVisualTime = -1000.f;
+	/**
+	 * Greystone combo: 0=A, 1=B, 2=C — last swing that successfully started.
+	 * Next letter only after montage ends, within sb.Melee.ComboWindowSec (or banked LMB).
+	 */
+	int32 MeleeComboIndex = 0;
+	/** World time until which the next combo letter is accepted (set when montage ends). */
+	float MeleeComboAcceptUntil = -1000.f;
+	/** Fallback window open if end delegate is late (set to Now + play length at start). */
+	float MeleeComboExpectedEndTime = -1000.f;
+	/** One LMB pressed while swing montage was playing — consumed on montage end as combo continue. */
+	bool bMeleeLmbBanked = false;
 	FDelegateHandle HeroBonesFinalizedHandle;
 	FRotator HeroMeshBaseRelativeRot = FRotator(0.f, -90.f, 0.f);
 
@@ -306,6 +317,9 @@ protected:
 	TObjectPtr<UInputAction> JumpAction = nullptr;
 	UPROPERTY()
 	TObjectPtr<UInputAction> FireAction = nullptr;
+	/** RMB: cancel active melee swing montage (Manny Greystone combo). */
+	UPROPERTY()
+	TObjectPtr<UInputAction> MeleeCancelAction = nullptr;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Recalling, BlueprintReadOnly, Category = "Siege|Recall")
 	bool bRecalling = false;
@@ -332,6 +346,7 @@ protected:
 	void OnLookTriggered(const FInputActionValue& Value);
 	void OnFirePressed();
 	void OnFireReleased();
+	void OnMeleeCancelPressed();
 	void OnToggleBowPressed();
 	void OnInteractPressed();
 	void OnPingPressed();
@@ -459,7 +474,19 @@ protected:
 	void OnMeleeSwingMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 	void EnsureShadowKightMeleeAnimBP();
 	void EnsureMeleeSwingAnimAssets();
+	/** True for Manny/Quinn Greystone combo path (not ShadowKight / Paragon). */
+	bool IsMannyGreystoneComboPath() const;
+	/** Load AM/AS_MM_GreystoneSwing_A/B/C for combo step (0/1/2); falls back to Preferred list. */
+	void SelectMannyGreystoneComboAssets(int32 ComboIndex);
+	/** 0=A / 1=B / 2=C based on post-anim window (after C always A). */
+	int32 ResolveMannyGreystoneComboIndex(float Now) const;
+	void ResetMannyMeleeComboState();
 	void EnsureMeleeHoldAnimAssets();
+	/** Open post-anim combo window; consume banked LMB as immediate B/C if eligible. */
+	void OpenMannyMeleeComboWindow();
+	/** Stop swing montage + chop; reset combo/bank/window (RMB cancel). */
+	void CancelMeleeSwing(const TCHAR* Reason);
+	bool IsMeleeSwingMontageActive() const;
 	void UpdateSwordHoldMontage();
 	void StopSwordHoldMontage();
 	void BindHeroBoneSwingOverlay();
