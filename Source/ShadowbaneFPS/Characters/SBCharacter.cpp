@@ -120,11 +120,25 @@ namespace
 		TEXT("1 = procedural pivot + torso lean with body montage (default). 0 = montage-only isolate. Sword relative chop uses sb.Sword.ChopScale."),
 		ECVF_Default);
 
-	/** Manny Greystone A→B→C: seconds after montage ends to press (or banked LMB) for next letter; miss → A. */
+	/** Manny Greystone: post-anim timing fallback (hold LMB auto-chains A→B→C→repeat). */
 	TAutoConsoleVariable<float> CVarMeleeComboWindowSec(
 		TEXT("sb.Melee.ComboWindowSec"),
 		0.5f,
-		TEXT("Manny Greystone: after A/B ends, LMB within this many seconds plays B/C. LMB during anim banks one continue. After C or miss → A. RMB cancels swing."),
+		TEXT("Manny Greystone: hold LMB chains A→B→C then repeats. Window used for resolve fallback if end delegate is late. RMB cancels swing."),
+		ECVF_Default);
+
+	/** Manny Greystone body montage play rate (1.25 = 25% faster). */
+	TAutoConsoleVariable<float> CVarMannyMeleePlayRate(
+		TEXT("sb.Melee.PlayRate"),
+		1.25f,
+		TEXT("Manny Greystone A/B/C montage play rate. Procedural chop is suppressed while montage plays."),
+		ECVF_Default);
+
+	/** Hold combo: start next letter at this fraction of montage (skip idle recovery tail). */
+	TAutoConsoleVariable<float> CVarMeleeComboChainAt(
+		TEXT("sb.Melee.ComboChainAt"),
+		0.66f,
+		TEXT("Manny Greystone hold combo: chain next swing at this normalized montage time (0.66 ≈ during follow-through)."),
 		ECVF_Default);
 
 	bool IsMeleeProceduralChopEnabled()
@@ -135,6 +149,16 @@ namespace
 	float GetMeleeComboWindowSec()
 	{
 		return FMath::Max(0.05f, CVarMeleeComboWindowSec.GetValueOnGameThread());
+	}
+
+	float GetMannyMeleePlayRate()
+	{
+		return FMath::Clamp(CVarMannyMeleePlayRate.GetValueOnGameThread(), 0.25f, 4.f);
+	}
+
+	float GetMeleeComboChainAt()
+	{
+		return FMath::Clamp(CVarMeleeComboChainAt.GetValueOnGameThread(), 0.35f, 0.95f);
 	}
 
 	bool IsMannyPreferredSwingName(const FString& N)
@@ -539,6 +563,7 @@ void ASBCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 		if (FireAction)
 		{
 			EIC->BindAction(FireAction, ETriggerEvent::Started, this, &ASBCharacter::OnFirePressed);
+			EIC->BindAction(FireAction, ETriggerEvent::Completed, this, &ASBCharacter::OnFireReleased);
 		}
 		if (MeleeCancelAction)
 		{
@@ -907,13 +932,9 @@ void ASBCharacter::OnFirePressed()
 	if (IsLocallyControlled() && !bDead && bUsesMelee && !bBowEquipped
 		&& Stamina >= MeleeStaminaCost)
 	{
-		// Bank one LMB during active Greystone swing — defer ServerFire until anim ends.
+		// Hold-to-combo: while a Greystone swing plays, wait for montage end (OpenMannyMeleeComboWindow).
 		if (IsMannyGreystoneComboPath() && IsMeleeSwingMontageActive())
 		{
-			bMeleeLmbBanked = true;
-			UE_LOG(LogTemp, Warning,
-				TEXT("%s LMB banked during Greystone swing (combo=%d) — continue on end"),
-				*GetName(), MeleeComboIndex);
 			return;
 		}
 		PlayMeleeAttackAnimation();
@@ -1010,7 +1031,12 @@ void ASBCharacter::PerformAttack()
 	}
 
 	const float Now = GetWorld()->GetTimeSeconds();
-	if (Now - LastFireTime < AttackInterval)
+	const float SinceLastFire = Now - LastFireTime;
+	// Greystone hold combo: allow faster server cadence than single-swing AttackInterval.
+	const float MeleeInterval = (IsMannyGreystoneComboPath() && bUsesMelee && !bBowEquipped)
+		? FMath::Min(AttackInterval, 0.12f)
+		: AttackInterval;
+	if (SinceLastFire < MeleeInterval)
 	{
 		return;
 	}
@@ -2271,21 +2297,15 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		|| (AnimInstEarly && CachedMeleeMontage == nullptr && AnimInstEarly->IsAnyMontagePlaying()
 			&& !bMeleeHoldMontagePlaying);
 
-	// Greystone: never interrupt mid-montage. Bank one LMB from a real extra press;
-	// Multicast echo of the same swing (dt since start tiny) must not bank.
+	// Greystone: never interrupt mid-montage — hold LMB continues on montage end.
 	if (IsMannyGreystoneComboPath() && bMontageStillPlaying)
 	{
 		if (World && (Now - LastMeleeVisualTime) < 0.25f)
 		{
 			UE_LOG(LogTemp, Verbose,
-				TEXT("%s Greystone Multicast echo while playing — skip (no bank)"),
+				TEXT("%s Greystone Multicast echo while playing — skip"),
 				*GetName());
-			return;
 		}
-		bMeleeLmbBanked = true;
-		UE_LOG(LogTemp, Warning,
-			TEXT("%s Greystone swing playing — LMB banked (combo=%d), no interrupt"),
-			*GetName(), MeleeComboIndex);
 		return;
 	}
 
@@ -2321,14 +2341,15 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		{
 			MeleeComboIndex = PendingComboIndex;
 			MeleeComboAcceptUntil = -1000.f; // closed until montage ends
+			bGreystoneComboContinuedThisSwing = false;
 			const float Len = FMath::Max(PlayedSeconds, 0.1f);
 			MeleeComboExpectedEndTime = LastMeleeVisualTime + Len;
-			bMeleeLmbBanked = false;
+			ScheduleGreystoneComboChain(Len);
 			UE_LOG(LogTemp, Warning,
-				TEXT("%s Greystone combo start step=%d (%s) len=%.2fs"),
+				TEXT("%s Greystone combo start step=%d (%s) len=%.2fs chain@%.0f%%"),
 				*GetName(), MeleeComboIndex,
 				MeleeComboIndex == 0 ? TEXT("A") : (MeleeComboIndex == 1 ? TEXT("B") : TEXT("C")),
-				Len);
+				Len, GetMeleeComboChainAt() * 100.f);
 		}
 	};
 
@@ -2423,7 +2444,22 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 	}
 
 	// Body montage is priority; procedural sword chop is optional polish (sb.Melee.ProceduralChop).
-	StartMeleeSwingVisual();
+	// Greystone montages own the full arc — skip short procedural chop (fights montage, looks choppy).
+	if (!(IsMannyGreystoneComboPath() && CachedMeleeMontage))
+	{
+		StartMeleeSwingVisual();
+	}
+	else
+	{
+		EnsureWeaponInHand();
+		UpdateWeaponVisibility();
+		if (TpSwordMesh && TpSwordMesh->GetSkeletalMeshAsset() && bUsesMelee && !bBowEquipped)
+		{
+			TpSwordMesh->SetHiddenInGame(false);
+			TpSwordMesh->SetVisibility(true, true);
+			ApplySwordGripFromCVars();
+		}
+	}
 	bMeleeMontagePlaying = false;
 	StopSwordHoldMontage();
 
@@ -2483,6 +2519,12 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 	auto BeginMontageSwingTiming = [this, bChop](float PlayedSeconds)
 	{
 		bMeleeMontagePlaying = true;
+		if (IsMannyGreystoneComboPath())
+		{
+			// Montage-only: procedural chop/timer fights Greystone body motion.
+			MeleeSwingAnimRemaining = 0.f;
+			return;
+		}
 		// Only drive procedural remaining when chop is on. Do NOT stretch Alpha over
 		// Montage_Play length (Alpha stayed ~0 → sword looked dead).
 		if (bChop && MeleeSwingAnimRemaining <= 0.f)
@@ -2492,6 +2534,8 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 		}
 		(void)PlayedSeconds;
 	};
+
+	const float MannyPlayRate = IsMannyGreystoneComboPath() ? GetMannyMeleePlayRate() : 1.f;
 
 	// --- ShadowKight: Montage_Play(AM_SK_LibSwing_01 preferred, else AM_SK_SwordSwing_01) ---
 	if (bUsingShadowKightHeroMesh)
@@ -2644,7 +2688,7 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 				*GetNameSafe(MeshSkel),
 				(MontSkel == MeshSkel) ? 1 : 0);
 		}
-		const float Played = AnimInst->Montage_Play(CachedMeleeMontage, 1.f);
+		const float Played = AnimInst->Montage_Play(CachedMeleeMontage, MannyPlayRate);
 		if (Played > 0.f)
 		{
 			BeginMontageSwingTiming(Played);
@@ -2652,11 +2696,12 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 			EndDelegate.BindUObject(this, &ASBCharacter::OnMeleeSwingMontageEnded);
 			AnimInst->Montage_SetEndDelegate(EndDelegate, CachedMeleeMontage);
 			UE_LOG(LogTemp, Warning,
-				TEXT("%s Montage_Play OK %s kind=%s (%.2fs) AnimBP=%s chop=%d"),
+				TEXT("%s Montage_Play OK %s kind=%s (%.2fs rate=%.2f) AnimBP=%s chop=%d"),
 				*GetName(),
 				*GetNameSafe(CachedMeleeMontage),
 				MontageKind(CachedMeleeMontage),
 				Played,
+				MannyPlayRate,
 				*GetNameSafe(Hero->GetAnimClass()),
 				IsMeleeProceduralChopEnabled() ? 1 : 0);
 			if (!IsMeleeProceduralChopEnabled())
@@ -2676,9 +2721,11 @@ void ASBCharacter::PlayMeleeAttackAnimation()
 	{
 		static const FName DefaultSlot(TEXT("DefaultSlot"));
 		if (UAnimMontage* Dyn = AnimInst->PlaySlotAnimationAsDynamicMontage(
-				CachedMeleeSwingSequence, DefaultSlot, 0.05f, 0.12f, 1.f, 1))
+				CachedMeleeSwingSequence, DefaultSlot, 0.05f, 0.12f, MannyPlayRate, 1))
 		{
-			const float PlayLen = FMath::Max(Dyn->GetPlayLength(), SBMeleeSwingAnim::DurationSeconds);
+			const float PlayLen = FMath::Max(
+				Dyn->GetPlayLength() / FMath::Max(MannyPlayRate, KINDA_SMALL_NUMBER),
+				SBMeleeSwingAnim::DurationSeconds);
 			BeginMontageSwingTiming(PlayLen);
 			FOnMontageEnded EndDelegate;
 			EndDelegate.BindUObject(this, &ASBCharacter::OnMeleeSwingMontageEnded);
@@ -2719,11 +2766,19 @@ void ASBCharacter::OnMeleeSwingMontageEnded(UAnimMontage* Montage, bool bInterru
 	{
 		return;
 	}
+	ClearGreystoneComboChainTimer();
 	bMeleeMontagePlaying = false;
 	bMeleeEmergencyChop = false;
 	if (!bInterrupted && IsMannyGreystoneComboPath())
 	{
-		OpenMannyMeleeComboWindow();
+		if (bGreystoneComboContinuedThisSwing)
+		{
+			bGreystoneComboContinuedThisSwing = false;
+		}
+		else
+		{
+			OpenMannyMeleeComboWindow();
+		}
 	}
 	if (MeleeSwingAnimRemaining <= 0.f)
 	{
@@ -2757,10 +2812,91 @@ bool ASBCharacter::IsMeleeSwingMontageActive() const
 
 void ASBCharacter::ResetMannyMeleeComboState()
 {
+	ClearGreystoneComboChainTimer();
 	MeleeComboIndex = 0;
 	MeleeComboAcceptUntil = -1000.f;
 	MeleeComboExpectedEndTime = -1000.f;
-	bMeleeLmbBanked = false;
+	bGreystoneComboContinuedThisSwing = false;
+}
+
+void ASBCharacter::ClearGreystoneComboChainTimer()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(MeleeComboChainTimerHandle);
+	}
+}
+
+void ASBCharacter::ScheduleGreystoneComboChain(float MontageDurationSec)
+{
+	ClearGreystoneComboChainTimer();
+	if (!IsMannyGreystoneComboPath() || MontageDurationSec <= 0.f)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	const float ChainDelay = FMath::Max(0.05f, MontageDurationSec * GetMeleeComboChainAt());
+	World->GetTimerManager().SetTimer(
+		MeleeComboChainTimerHandle,
+		this,
+		&ASBCharacter::TryContinueGreystoneComboHold,
+		ChainDelay,
+		false);
+}
+
+void ASBCharacter::TryContinueGreystoneComboHold()
+{
+	if (!IsMannyGreystoneComboPath() || bGreystoneComboContinuedThisSwing)
+	{
+		return;
+	}
+	if (!IsLocallyControlled() || bDead || !bUsesMelee || bBowEquipped)
+	{
+		return;
+	}
+	if (!IsMeleeFireHeld())
+	{
+		return;
+	}
+	if (Stamina < MeleeStaminaCost)
+	{
+		return;
+	}
+
+	bGreystoneComboContinuedThisSwing = true;
+	ClearGreystoneComboChainTimer();
+
+	if (USkeletalMeshComponent* Hero = GetMesh())
+	{
+		if (UAnimInstance* AnimInst = Hero->GetAnimInstance())
+		{
+			if (CachedMeleeMontage && AnimInst->Montage_IsPlaying(CachedMeleeMontage))
+			{
+				AnimInst->Montage_Stop(0.06f, CachedMeleeMontage);
+			}
+		}
+	}
+	bMeleeMontagePlaying = false;
+
+	UE_LOG(LogTemp, Verbose, TEXT("%s Greystone early chain (step=%d)"), *GetName(), MeleeComboIndex);
+	PlayMeleeAttackAnimation();
+	ServerFire();
+}
+
+bool ASBCharacter::IsMeleeFireHeld() const
+{
+	if (!IsLocallyControlled())
+	{
+		return false;
+	}
+	const APlayerController* PC = Cast<APlayerController>(GetController());
+	return PC && PC->IsInputKeyDown(EKeys::LeftMouseButton);
 }
 
 int32 ASBCharacter::ResolveMannyGreystoneComboIndex(float Now) const
@@ -2839,15 +2975,14 @@ void ASBCharacter::OpenMannyMeleeComboWindow()
 	const float Window = GetMeleeComboWindowSec();
 	MeleeComboAcceptUntil = Now + Window;
 
-	const bool bHadBank = bMeleeLmbBanked;
-	bMeleeLmbBanked = false;
+	const bool bHoldContinue = IsMeleeFireHeld();
 
 	UE_LOG(LogTemp, Warning,
-		TEXT("%s Greystone combo window open %.2fs (step=%d bank=%d)"),
-		*GetName(), Window, MeleeComboIndex, bHadBank ? 1 : 0);
+		TEXT("%s Greystone combo window open %.2fs (step=%d hold=%d)"),
+		*GetName(), Window, MeleeComboIndex, bHoldContinue ? 1 : 0);
 
-	// Banked LMB during A/B → immediately continue to B/C (as if pressed in window).
-	if (bHadBank && MeleeComboIndex < 2 && IsLocallyControlled() && !bDead
+	// Hold LMB: auto-chain A→B→C, then wrap to A while still held.
+	if (bHoldContinue && IsLocallyControlled() && !bDead
 		&& bUsesMelee && !bBowEquipped && Stamina >= MeleeStaminaCost)
 	{
 		PlayMeleeAttackAnimation();
@@ -2857,6 +2992,7 @@ void ASBCharacter::OpenMannyMeleeComboWindow()
 
 void ASBCharacter::CancelMeleeSwing(const TCHAR* Reason)
 {
+	ClearGreystoneComboChainTimer();
 	USkeletalMeshComponent* Hero = GetMesh();
 	if (UAnimInstance* AnimInst = Hero ? Hero->GetAnimInstance() : nullptr)
 	{
@@ -3669,7 +3805,7 @@ void ASBCharacter::TickCastInvokeVisual(float DeltaSeconds)
 
 void ASBCharacter::OnFireReleased()
 {
-	// Bow draw-release lands in a follow-up; melee ignores release.
+	// Hold-to-combo: releasing LMB stops chaining after the current swing finishes.
 }
 
 void ASBCharacter::OnToggleBowPressed()

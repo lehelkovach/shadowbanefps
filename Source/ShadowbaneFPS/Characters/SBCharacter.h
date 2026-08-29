@@ -292,15 +292,16 @@ protected:
 	float LastMeleeVisualTime = -1000.f;
 	/**
 	 * Greystone combo: 0=A, 1=B, 2=C — last swing that successfully started.
-	 * Next letter only after montage ends, within sb.Melee.ComboWindowSec (or banked LMB).
+	 * Hold LMB: auto-chains A→B→C then repeats while held; release stops after current swing.
 	 */
 	int32 MeleeComboIndex = 0;
 	/** World time until which the next combo letter is accepted (set when montage ends). */
 	float MeleeComboAcceptUntil = -1000.f;
 	/** Fallback window open if end delegate is late (set to Now + play length at start). */
 	float MeleeComboExpectedEndTime = -1000.f;
-	/** One LMB pressed while swing montage was playing — consumed on montage end as combo continue. */
-	bool bMeleeLmbBanked = false;
+	/** Hold combo: next swing already started via early chain timer (skip end-of-montage repeat). */
+	bool bGreystoneComboContinuedThisSwing = false;
+	FTimerHandle MeleeComboChainTimerHandle;
 	FDelegateHandle HeroBonesFinalizedHandle;
 	FRotator HeroMeshBaseRelativeRot = FRotator(0.f, -90.f, 0.f);
 
@@ -482,11 +483,17 @@ protected:
 	int32 ResolveMannyGreystoneComboIndex(float Now) const;
 	void ResetMannyMeleeComboState();
 	void EnsureMeleeHoldAnimAssets();
-	/** Open post-anim combo window; consume banked LMB as immediate B/C if eligible. */
+	/** After montage ends: if LMB still held, auto-play next Greystone letter (A after C). */
 	void OpenMannyMeleeComboWindow();
-	/** Stop swing montage + chop; reset combo/bank/window (RMB cancel). */
+	/** Hold LMB: fire next letter partway through swing (skip recovery tail). */
+	void ScheduleGreystoneComboChain(float MontageDurationSec);
+	void ClearGreystoneComboChainTimer();
+	void TryContinueGreystoneComboHold();
+	/** Stop swing montage + chop; reset combo/window (RMB cancel). */
 	void CancelMeleeSwing(const TCHAR* Reason);
 	bool IsMeleeSwingMontageActive() const;
+	/** Local LMB held — polled at combo continue so hold-to-chain is reliable. */
+	bool IsMeleeFireHeld() const;
 	void UpdateSwordHoldMontage();
 	void StopSwordHoldMontage();
 	void BindHeroBoneSwingOverlay();

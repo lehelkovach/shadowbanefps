@@ -23,13 +23,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "ModelingToolsEditorMode",
-			"Enabled": true,
-			"TargetAllowList": [
-				"Editor"
-			]
-		},
-		{
 			"Name": "OnlineSubsystemUtils",
 			"Enabled": true
 		},
@@ -38,24 +31,31 @@
 			"Enabled": true
 		},
 		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": false,
+			"TargetAllowList": [
+				"Editor"
+			]
+		},
+		{
 			"Name": "PoseSearch",
-			"Enabled": true
+			"Enabled": false
 		},
 		{
 			"Name": "Chooser",
-			"Enabled": true
+			"Enabled": false
 		},
 		{
 			"Name": "AnimationWarping",
-			"Enabled": true
+			"Enabled": false
 		},
 		{
 			"Name": "MotionWarping",
-			"Enabled": true
+			"Enabled": false
 		},
 		{
 			"Name": "AnimationLocomotionLibrary",
-			"Enabled": true
+			"Enabled": false
 		}
 	]
 }

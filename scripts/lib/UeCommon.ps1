@@ -6,7 +6,7 @@
 $script:SB_LibDir = $PSScriptRoot
 $script:SB_ScriptsDir = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $script:SB_ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
-$script:SB_DefaultEngineRoot = "C:\Program Files\Epic Games\UE_5.5"
+$script:SB_DefaultEngineRoot = "D:\Program Files\Epic Games\UE_5.5"
 
 function Get-SBProjectRoot {
     return $script:SB_ProjectRoot
@@ -69,6 +69,19 @@ function Get-SBDebugArgs {
         return @('-SBDebug', '-SBVerbose')
     }
     return @('-SBDebug')
+}
+
+# Default client window: windowed 1600x900 (avoids exclusive/borderless fullscreen).
+function Get-SBWindowedLaunchArgs {
+    return @('-windowed', '-ResX=1600', '-ResY=900')
+}
+
+# Split a free-form ExtraArgs string into individual argv tokens.
+# Callers MUST use this — appending the raw string makes Start-Process pass one arg.
+function Split-SBExtraArgs {
+    param([string]$ExtraArgs = "")
+    if (-not $ExtraArgs) { return @() }
+    return @($ExtraArgs -split '\s+' | Where-Object { $_ })
 }
 
 function Invoke-SBUbtBuild {
